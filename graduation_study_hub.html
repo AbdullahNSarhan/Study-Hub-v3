@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Study Hub</title>
+    <meta name="description" content="Comprehensive academic and personal study management workspace featuring atomic zero-data-loss persistence, a rich-text Smart Notes studio with categorization and .txt export, a responsive 16:9 Video Studio with WaveSurfer audio visualization, split-screen PDF reader, interactive whiteboard, flashcards, Pomodoro focus timer, and 17-scene Zen Sanctuary.">
+    <meta property="og:title" content="Study Hub">
+    <meta property="og:description" content="Comprehensive academic and personal study management workspace featuring atomic zero-data-loss persistence, a rich-text Smart Notes studio with categorization and .txt export, a responsive 16:9 Video Studio with WaveSurfer audio visualization, split-screen PDF reader, interactive whiteboard, flashcards, Pomodoro focus timer, and 17-scene Zen Sanctuary.">
     <link rel="icon" href="data:,">
     <!-- Libraries: local copies in /vendor are used when available (offline release), CDN otherwise -->
     <script src="/vendor/tailwind.js"></script>
@@ -42,6 +45,73 @@
         html.dark { color-scheme: dark; }
         body { font-family: 'Plus Jakarta Sans', 'Inter', 'Segoe UI', sans-serif; transition: background-color 0.3s, color 0.3s; user-select: none; -webkit-font-smoothing: antialiased; }
         input, textarea, select, [contenteditable] { user-select: text; }
+
+        /* ---------- Smart Notes Rich Text Typography ---------- */
+        .smart-rich-editor:empty:before {
+            content: attr(data-placeholder);
+            color: #9aa1bb;
+            pointer-events: none;
+            display: block;
+        }
+        .smart-rich-editor h1, .rich-note-body h1 { font-size: 1.35rem; font-weight: 800; margin: 0.45rem 0 0.25rem; line-height: 1.3; }
+        .smart-rich-editor h2, .rich-note-body h2 { font-size: 1.12rem; font-weight: 800; margin: 0.4rem 0 0.2rem; line-height: 1.35; }
+        .smart-rich-editor h3, .rich-note-body h3 { font-size: 1rem; font-weight: 700; margin: 0.35rem 0 0.15rem; }
+        .smart-rich-editor p, .rich-note-body p { margin-bottom: 0.4rem; line-height: 1.6; }
+        .smart-rich-editor ul, .rich-note-body ul { list-style-type: disc; padding-left: 1.4rem; margin: 0.35rem 0; }
+        .smart-rich-editor ol, .rich-note-body ol { list-style-type: decimal; padding-left: 1.4rem; margin: 0.35rem 0; }
+        .smart-rich-editor li, .rich-note-body li { margin-bottom: 0.2rem; line-height: 1.55; }
+        .smart-rich-editor blockquote, .rich-note-body blockquote {
+            border-left: 3px solid #7c5cff;
+            padding: 0.35rem 0.75rem;
+            margin: 0.45rem 0;
+            background: rgba(124, 92, 255, 0.08);
+            border-radius: 0 0.5rem 0.5rem 0;
+            font-style: italic;
+        }
+        .smart-rich-editor code, .rich-note-body code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.84em;
+            padding: 0.12rem 0.35rem;
+            border-radius: 0.35rem;
+            background: rgba(124, 92, 255, 0.14);
+        }
+        .smart-rich-editor pre, .rich-note-body pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            padding: 0.65rem 0.85rem;
+            border-radius: 0.65rem;
+            background: rgba(15, 23, 42, 0.85);
+            color: #e2e8f0;
+            overflow-x: auto;
+            margin: 0.45rem 0;
+        }
+        .rte-tool-btn {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+            transition: all 0.15s ease;
+        }
+        .rte-tool-btn:hover {
+            background: rgba(124, 92, 255, 0.15);
+            color: #7c5cff;
+        }
+        /* Responsive Video Studio Container */
+        #videoScreenWrapper {
+            aspect-ratio: 16 / 9;
+            width: 100%;
+            max-width: 960px;
+            max-height: 62vh;
+            transition: max-width 0.25s ease, max-height 0.25s ease;
+        }
+        #videoScreenWrapper.video-theatre-expanded {
+            max-width: 100%;
+            max-height: 76vh;
+        }
 
         /* ---------- Aurora background ---------- */
         body::before {
@@ -427,8 +497,13 @@
                     </div>
                 </button>
 
-                <!-- Kept Top-Right Controls: System Online, Search, Fullscreen, Dark/Light Theme -->
-                <div class="flex items-center gap-2.5 sm:gap-3">
+                <!-- Kept Top-Right Controls: Auto-Save Shield, System Online, Search, Fullscreen, Dark/Light Theme -->
+                <div class="flex items-center gap-2 sm:gap-2.5">
+                    <button id="autoSaveBadge" onclick="flushSave(true)" title="Zero Data Loss Engine Active — Click to Force Atomic Save Now" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition cursor-pointer">
+                        <i id="autoSaveIcon" class="fa-solid fa-shield-check text-emerald-500"></i>
+                        <span id="autoSaveText">Zero-Loss Ready</span>
+                    </button>
+
                     <div id="serverStatus" class="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border">
                         <div class="w-2 h-2 rounded-full animate-pulse" id="statusDot"></div> <span id="statusText">Checking...</span>
                     </div>
@@ -772,15 +847,44 @@
                     </div>
                 </div>
 
-                <div id="pdfSplitArea" class="hidden flex-grow gap-4 min-h-[400px]">
+                <div id="pdfSplitArea" class="hidden flex-grow gap-4 min-h-[420px]">
                     <div id="splitNotesPanel" class="w-1/3 flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative">
-                        <div class="p-4 bg-gray-50 dark:bg-gray-900 flex justify-between items-center border-b dark:border-gray-700">
-                            <span class="font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-pen text-brand-500"></i> Quick Notes</span>
-                            <button onclick="closeSplitScreen()" class="text-gray-400 hover:text-rose-500 w-8 h-8 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 transition flex justify-center items-center"><i class="fa-solid fa-times"></i></button>
+                        <div class="p-3.5 bg-gray-50 dark:bg-gray-900 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+                            <span class="font-extrabold text-sm flex items-center gap-2"><i class="fa-solid fa-pen-nib text-brand-500"></i> Split-Screen Smart Notes</span>
+                            <div class="flex items-center gap-1.5">
+                                <span id="splitDraftBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">Auto-Protected</span>
+                                <button onclick="closeSplitScreen()" class="text-gray-400 hover:text-rose-500 w-7 h-7 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 transition flex justify-center items-center" title="Close Split Screen"><i class="fa-solid fa-times"></i></button>
+                            </div>
                         </div>
-                        <div class="p-4 flex-grow flex flex-col gap-3">
-                            <textarea id="splitNoteInput" placeholder="Summarize key points here..." class="flex-grow w-full p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none text-sm"></textarea>
-                            <button onclick="saveSplitNote()" class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2"><i class="fa-solid fa-save"></i> Save Note</button>
+                        <div class="p-3.5 flex-grow flex flex-col gap-2.5 overflow-hidden">
+                            <div class="grid grid-cols-2 gap-2 shrink-0">
+                                <input type="text" id="splitNoteTitleInput" oninput="handleSplitDraftInput()" placeholder="Note title..." class="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white">
+                                <select id="splitNoteCategorySelect" onchange="handleSplitDraftInput()" class="px-2.5 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white">
+                                    <option value="Lectures">Lectures</option>
+                                    <option value="Exam Prep">Exam Prep</option>
+                                    <option value="Summaries">Summaries</option>
+                                    <option value="Projects">Projects</option>
+                                    <option value="Research">Research</option>
+                                    <option value="Important">Important</option>
+                                </select>
+                            </div>
+                            <!-- Mini Rich Text Toolbar for Split View -->
+                            <div class="flex flex-wrap items-center gap-1 p-1.5 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shrink-0">
+                                <button type="button" onclick="execSplitFormat('bold')" title="Bold" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-bold"></i></button>
+                                <button type="button" onclick="execSplitFormat('italic')" title="Italic" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-italic"></i></button>
+                                <button type="button" onclick="execSplitFormat('underline')" title="Underline" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-underline"></i></button>
+                                <button type="button" onclick="execSplitFormat('insertUnorderedList')" title="Bullet List" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-list-ul"></i></button>
+                                <button type="button" onclick="execSplitFormat('insertOrderedList')" title="Numbered List" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-list-ol"></i></button>
+                                <button type="button" onclick="execSplitFormat('justifyLeft')" title="Align Left" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-align-left"></i></button>
+                                <button type="button" onclick="execSplitFormat('justifyCenter')" title="Align Center" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-align-center"></i></button>
+                                <button type="button" onclick="execSplitFormat('removeFormat')" title="Clear Formatting" class="rte-tool-btn text-rose-500 ml-auto"><i class="fa-solid fa-eraser"></i></button>
+                            </div>
+                            <div id="splitNoteEditor" contenteditable="true" oninput="handleSplitDraftInput()" data-placeholder="Summarize key points while reading..." class="smart-rich-editor flex-grow w-full p-3.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 overflow-y-auto text-sm dark:text-white"></div>
+                            <textarea id="splitNoteInput" class="hidden"></textarea>
+                            <div class="flex gap-2 shrink-0">
+                                <button onclick="saveSplitNote()" class="flex-grow py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md"><i class="fa-solid fa-floppy-disk"></i> Save Smart Note</button>
+                                <button onclick="exportSplitNoteTxt()" title="Export Note to .txt" class="px-3.5 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-cyan-500 hover:text-white text-gray-700 dark:text-gray-200 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition"><i class="fa-solid fa-file-arrow-down"></i> .txt</button>
+                            </div>
                         </div>
                     </div>
                     
@@ -803,103 +907,152 @@
                 <div id="pdfsContainer" class="flex flex-col gap-4"></div>
             </div>
 
-            <!-- VIDEOS TAB -->
+            <!-- VIDEOS TAB (PHASE 3 OVERHAUL: DYNAMIC 16:9 SCALING, THEATRE MODE & SIDE-BY-SIDE LECTURE NOTES) -->
             <div id="content-videos" class="tab-content hidden h-full flex flex-col gap-4 overflow-y-auto pr-2 pb-20">
-                <!-- Video Upload Bar -->
-                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between shrink-0">
-                    <div class="relative flex-grow">
-                        <i class="fa-solid fa-film absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-400 text-sm"></i>
-                        <input type="text" id="vidTitleInput" placeholder="Optional video title (or leave blank to use filename)..." class="w-full pl-9 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 font-semibold text-sm dark:text-white">
+                <!-- Unified Frictionless Video Action & Upload Toolbar -->
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-wrap gap-3 items-center justify-between shrink-0">
+                    <div class="flex flex-wrap items-center gap-2.5 flex-grow">
+                        <div class="relative flex-grow min-w-[200px] max-w-md">
+                            <i class="fa-solid fa-film absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-400 text-sm"></i>
+                            <input type="text" id="vidTitleInput" placeholder="Custom video title (optional before upload)..." class="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 font-semibold text-sm dark:text-white">
+                        </div>
+                        <div class="relative w-full sm:w-52">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                            <input type="text" id="videoFilterInput" oninput="renderVideosListOnly()" placeholder="Filter playlist..." class="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white">
+                        </div>
                     </div>
-                    <label class="px-5 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl cursor-pointer transition text-sm font-bold flex items-center justify-center gap-2 shadow-md shrink-0">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload Videos
-                        <input type="file" id="videoUploadInput" multiple accept=".mp4,.mkv,.webm,.mov,.avi,.m4v,.wmv" class="hidden" onchange="handleVideoUpload(event)">
-                    </label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="toggleVideoTheatreMode()" id="videoTheatreBtn" title="Toggle Expanded Cinema View" class="px-3.5 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-brand-500 hover:text-white text-gray-700 dark:text-gray-200 font-bold text-xs flex items-center gap-2 transition">
+                            <i class="fa-solid fa-panorama"></i> <span id="videoTheatreBtnText">Cinema Size</span>
+                        </button>
+                        <button onclick="toggleVideoFitMode()" id="videoFitBtn" title="Switch Aspect Fit vs Cover" class="px-3.5 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-cyan-500 hover:text-white text-gray-700 dark:text-gray-200 font-bold text-xs flex items-center gap-2 transition">
+                            <i class="fa-solid fa-crop-simple"></i> <span id="videoFitBtnText">Fit: 16:9</span>
+                        </button>
+                        <button onclick="toggleVideoSideNotes()" id="videoSideNotesBtn" title="Take Timestamped Notes Beside Video" class="px-3.5 py-2.5 rounded-xl bg-brand-50 dark:bg-brand-500/15 hover:bg-brand-600 text-brand-600 dark:text-brand-300 hover:text-white border border-brand-200/70 dark:border-brand-500/30 font-bold text-xs flex items-center gap-2 transition">
+                            <i class="fa-solid fa-pen-to-square"></i> <span>Lecture Notes</span>
+                        </button>
+                        <label class="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl cursor-pointer transition text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-md shrink-0">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload Videos
+                            <input type="file" id="videoUploadInput" multiple accept=".mp4,.mkv,.webm,.mov,.avi,.m4v,.wmv" class="hidden" onchange="handleVideoUpload(event)">
+                        </label>
+                    </div>
                 </div>
 
-                <!-- Video Studio Player Deck -->
-                <div id="videoPlayerDeck" class="relative overflow-hidden bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 shrink-0">
-                    <div class="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-gradient-to-br from-cyan-500/15 to-brand-500/15 blur-3xl pointer-events-none"></div>
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500 via-brand-500 to-pink-500 flex items-center justify-center text-white shadow-md shrink-0">
-                                <i class="fa-solid fa-clapperboard text-lg"></i>
+                <!-- Responsive Video Studio Deck + Optional Side-by-Side Timestamped Notes -->
+                <div id="videoStudioGrid" class="grid grid-cols-1 gap-4 items-start shrink-0">
+                    <!-- Video Studio Player Deck -->
+                    <div id="videoPlayerDeck" class="relative overflow-hidden bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700">
+                        <div class="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-gradient-to-br from-cyan-500/15 to-brand-500/15 blur-3xl pointer-events-none"></div>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500 via-brand-500 to-pink-500 flex items-center justify-center text-white shadow-md shrink-0">
+                                    <i class="fa-solid fa-clapperboard text-lg"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h3 id="videoTrackTitle" class="font-extrabold text-base sm:text-lg truncate text-gray-800 dark:text-gray-100">Select or upload a video to watch</h3>
+                                    <p id="videoTrackMeta" class="text-xs font-semibold text-gray-400">16:9 Adaptive Studio Player • Click video to play/pause, double-click for fullscreen</p>
+                                </div>
                             </div>
-                            <div class="min-w-0">
-                                <h3 id="videoTrackTitle" class="font-extrabold text-base sm:text-lg truncate text-gray-800 dark:text-gray-100">Select or upload a video to watch</h3>
-                                <p id="videoTrackMeta" class="text-xs font-semibold text-gray-400">Video Studio Player • Interactive waveform & timeline</p>
+                            <div class="flex items-center gap-2 self-start sm:self-center shrink-0">
+                                <span id="videoResolutionBadge" class="hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/20">16:9 HD</span>
+                                <div class="font-mono text-xs sm:text-sm font-bold px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-900 text-brand-600 dark:text-brand-300">
+                                    <span id="videoCurrentTime">00:00</span> <span class="text-gray-400">/</span> <span id="videoDuration">00:00</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="font-mono text-xs sm:text-sm font-bold px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-900 text-brand-600 dark:text-brand-300 shrink-0 self-start sm:self-center">
-                            <span id="videoCurrentTime">00:00</span> <span class="text-gray-400">/</span> <span id="videoDuration">00:00</span>
-                        </div>
-                    </div>
-
-                    <!-- Video Screen -->
-                    <div id="videoScreenWrapper" class="relative rounded-2xl overflow-hidden bg-gray-950 border border-gray-200/60 dark:border-gray-700 mb-4 flex items-center justify-center aspect-video max-h-[420px] w-full mx-auto shadow-inner">
-                        <video id="studioVideoPlayer" class="w-full h-full object-contain cursor-pointer" playsinline onclick="toggleVideoPlayPause()" ondblclick="toggleVideoFullscreen()"></video>
-                        <div id="videoEmptyOverlay" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 pointer-events-none bg-gradient-to-b from-gray-900/80 to-gray-950/95">
-                            <div class="w-16 h-16 rounded-2xl bg-brand-500/20 text-brand-400 flex items-center justify-center text-3xl mb-3 shadow-lg">
-                                <i class="fa-solid fa-play"></i>
-                            </div>
-                            <p class="font-bold text-sm text-gray-300">No video loaded</p>
-                            <p class="text-xs text-gray-500 mt-1">Upload a lecture video above or pick one from your playlist below</p>
-                        </div>
-                    </div>
-
-                    <!-- Interactive Gradient Waveform + Seek Bar -->
-                    <div class="relative rounded-2xl bg-gray-50 dark:bg-gray-900/80 border border-gray-200/70 dark:border-gray-700 p-3.5 mb-4">
-                        <div class="relative min-h-[60px] flex items-center">
-                            <div id="videoWaveformContainer" class="w-full"></div>
-                            <div id="videoWaveformHint" class="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-400 pointer-events-none">
-                                <i class="fa-solid fa-wave-square mr-2 text-cyan-400"></i> Interactive audio waveform & timeline scrubber
-                            </div>
-                        </div>
-                        <input type="range" id="videoSeekSlider" min="0" max="1000" value="0" oninput="scrubVideoSlider(this.value)" class="w-full h-1.5 mt-2 cursor-pointer rounded-lg">
-                    </div>
-
-                    <!-- Video Transport & Speed / Volume / Screen Controls -->
-                    <div class="flex flex-wrap items-center justify-between gap-4">
-                        <div class="flex items-center gap-2.5">
-                            <button onclick="seekVideoPlayer(-10)" title="Rewind 10s" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-500/20 text-gray-700 dark:text-gray-200 hover:text-brand-600 font-bold text-xs flex items-center justify-center transition">
-                                -10s
-                            </button>
-                            <button id="videoPlayPauseBtn" onclick="toggleVideoPlayPause()" class="w-12 h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-lg flex items-center justify-center shadow-lg transition">
-                                <i id="videoPlayPauseIcon" class="fa-solid fa-play"></i>
-                            </button>
-                            <button onclick="seekVideoPlayer(10)" title="Forward 10s" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-500/20 text-gray-700 dark:text-gray-200 hover:text-brand-600 font-bold text-xs flex items-center justify-center transition">
-                                +10s
-                            </button>
-                            <button id="videoLoopBtn" onclick="toggleVideoLoop()" title="Toggle Loop" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-brand-500 flex items-center justify-center transition">
-                                <i class="fa-solid fa-repeat text-sm"></i>
-                            </button>
                         </div>
 
-                        <div class="flex flex-wrap items-center gap-4">
-                            <!-- Speed Selector -->
-                            <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200/60 dark:border-gray-700">
-                                <button onclick="setVideoSpeed(0.75)" data-vspeed="0.75" class="video-speed-btn px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-brand-500 transition">0.75×</button>
-                                <button onclick="setVideoSpeed(1)" data-vspeed="1" class="video-speed-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-600 text-white shadow-sm transition">1×</button>
-                                <button onclick="setVideoSpeed(1.25)" data-vspeed="1.25" class="video-speed-btn px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-brand-500 transition">1.25×</button>
-                                <button onclick="setVideoSpeed(1.5)" data-vspeed="1.5" class="video-speed-btn px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-brand-500 transition">1.5×</button>
-                                <button onclick="setVideoSpeed(2)" data-vspeed="2" class="video-speed-btn px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-brand-500 transition">2×</button>
+                        <!-- Dynamic 16:9 Video Screen (Zero Clipping / Zero Distortion) -->
+                        <div id="videoScreenWrapper" class="relative rounded-2xl overflow-hidden bg-gray-950 border border-gray-200/60 dark:border-gray-700 mb-4 flex items-center justify-center mx-auto shadow-xl">
+                            <video id="studioVideoPlayer" class="w-full h-full object-contain cursor-pointer transition-all" playsinline onclick="toggleVideoPlayPause()" ondblclick="toggleVideoFullscreen()"></video>
+                            <div id="videoEmptyOverlay" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 pointer-events-none bg-gradient-to-b from-gray-900/80 to-gray-950/95 p-6 text-center">
+                                <div class="w-16 h-16 rounded-2xl bg-brand-500/20 text-brand-400 flex items-center justify-center text-3xl mb-3 shadow-lg">
+                                    <i class="fa-solid fa-play"></i>
+                                </div>
+                                <p class="font-bold text-sm text-gray-200">No video currently active</p>
+                                <p class="text-xs text-gray-400 mt-1 max-w-md">Select a lecture from the playlist below or click "Upload Videos" to import local MP4/WebM/MKV lectures.</p>
                             </div>
-                            <!-- Volume Slider -->
+                        </div>
+
+                        <!-- Interactive Gradient Waveform + Seek Bar -->
+                        <div class="relative rounded-2xl bg-gray-50 dark:bg-gray-900/80 border border-gray-200/70 dark:border-gray-700 p-3.5 mb-4">
+                            <div class="relative min-h-[54px] flex items-center">
+                                <div id="videoWaveformContainer" class="w-full"></div>
+                                <div id="videoWaveformHint" class="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-400 pointer-events-none">
+                                    <i class="fa-solid fa-wave-square mr-2 text-cyan-400"></i> Interactive audio waveform & precision timeline scrubber
+                                </div>
+                            </div>
+                            <input type="range" id="videoSeekSlider" min="0" max="1000" value="0" oninput="scrubVideoSlider(this.value)" class="w-full h-1.5 mt-2 cursor-pointer rounded-lg">
+                        </div>
+
+                        <!-- Video Transport & Speed / Volume / Screen Controls -->
+                        <div class="flex flex-wrap items-center justify-between gap-4">
                             <div class="flex items-center gap-2">
-                                <button onclick="toggleVideoMute()" class="text-gray-500 dark:text-gray-400 hover:text-brand-500 w-7 h-7 flex items-center justify-center">
-                                    <i id="videoVolumeIcon" class="fa-solid fa-volume-high text-sm"></i>
+                                <button onclick="seekVideoPlayer(-10)" title="Rewind 10s" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-500/20 text-gray-700 dark:text-gray-200 hover:text-brand-600 font-bold text-xs flex items-center justify-center transition">
+                                    -10s
                                 </button>
-                                <input type="range" id="videoVolumeSlider" min="0" max="1" step="0.05" value="1" oninput="setVideoVolume(this.value)" class="w-24 cursor-pointer">
+                                <button id="videoPlayPauseBtn" onclick="toggleVideoPlayPause()" class="w-12 h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-lg flex items-center justify-center shadow-lg transition">
+                                    <i id="videoPlayPauseIcon" class="fa-solid fa-play"></i>
+                                </button>
+                                <button onclick="seekVideoPlayer(10)" title="Forward 10s" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-500/20 text-gray-700 dark:text-gray-200 hover:text-brand-600 font-bold text-xs flex items-center justify-center transition">
+                                    +10s
+                                </button>
+                                <button id="videoLoopBtn" onclick="toggleVideoLoop()" title="Toggle Loop" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-brand-500 flex items-center justify-center transition">
+                                    <i class="fa-solid fa-repeat text-sm"></i>
+                                </button>
+                                <button onclick="insertVideoTimestampNote()" title="Stamp Current Video Time into Lecture Notes" class="px-3 h-10 rounded-xl bg-cyan-500/10 hover:bg-cyan-500 text-cyan-600 dark:text-cyan-300 hover:text-white font-bold text-xs flex items-center gap-1.5 transition border border-cyan-500/20">
+                                    <i class="fa-solid fa-stopwatch"></i> <span class="hidden sm:inline">+ Stamp Time</span>
+                                </button>
                             </div>
-                            <!-- PiP & Fullscreen -->
-                            <div class="flex items-center gap-1.5">
-                                <button onclick="toggleVideoPiP()" title="Picture-in-Picture" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-brand-500 hover:text-white flex items-center justify-center transition">
-                                    <i class="fa-solid fa-clone text-sm"></i>
-                                </button>
-                                <button onclick="toggleVideoFullscreen()" title="Fullscreen Video" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-brand-500 hover:text-white flex items-center justify-center transition">
-                                    <i class="fa-solid fa-expand text-sm"></i>
-                                </button>
+
+                            <div class="flex flex-wrap items-center gap-3 sm:gap-4">
+                                <!-- Speed Selector -->
+                                <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200/60 dark:border-gray-700">
+                                    <button onclick="setVideoSpeed(0.75)" data-vspeed="0.75" class="video-speed-btn px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-brand-500 transition">0.75×</button>
+                                    <button onclick="setVideoSpeed(1)" data-vspeed="1" class="video-speed-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-600 text-white shadow-sm transition">1×</button>
+                                    <button onclick="setVideoSpeed(1.25)" data-vspeed="1.25" class="video-speed-btn px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-brand-500 transition">1.25×</button>
+                                    <button onclick="setVideoSpeed(1.5)" data-vspeed="1.5" class="video-speed-btn px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-brand-500 transition">1.5×</button>
+                                    <button onclick="setVideoSpeed(2)" data-vspeed="2" class="video-speed-btn px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-brand-500 transition">2×</button>
+                                </div>
+                                <!-- Volume Slider -->
+                                <div class="flex items-center gap-2">
+                                    <button onclick="toggleVideoMute()" class="text-gray-500 dark:text-gray-400 hover:text-brand-500 w-7 h-7 flex items-center justify-center">
+                                        <i id="videoVolumeIcon" class="fa-solid fa-volume-high text-sm"></i>
+                                    </button>
+                                    <input type="range" id="videoVolumeSlider" min="0" max="1" step="0.05" value="1" oninput="setVideoVolume(this.value)" class="w-24 cursor-pointer">
+                                </div>
+                                <!-- PiP & Fullscreen -->
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="toggleVideoPiP()" title="Picture-in-Picture" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-brand-500 hover:text-white flex items-center justify-center transition">
+                                        <i class="fa-solid fa-clone text-sm"></i>
+                                    </button>
+                                    <button onclick="toggleVideoFullscreen()" title="Fullscreen Video" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-brand-500 hover:text-white flex items-center justify-center transition">
+                                        <i class="fa-solid fa-expand text-sm"></i>
+                                    </button>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Side-by-Side Video Lecture Notes Drawer (Toggled via Toolbar) -->
+                    <div id="videoSideNotesPanel" class="hidden bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 flex-col gap-3 h-full">
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
+                            <div>
+                                <h4 class="font-extrabold text-sm flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-brand-500"></i> Video Lecture Notes</h4>
+                                <p class="text-[11px] text-gray-400">Saves directly to your Smart Notes without interrupting video playback</p>
+                            </div>
+                            <button onclick="toggleVideoSideNotes()" class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <input type="text" id="videoNoteTitleInput" placeholder="Lecture note title..." class="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white">
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="insertVideoTimestampNote()" class="px-3 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 hover:bg-cyan-500 hover:text-white text-xs font-bold transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-clock"></i> Insert Current Timestamp
+                            </button>
+                        </div>
+                        <textarea id="videoQuickNoteInput" placeholder="Write timestamped observations while watching..." class="w-full flex-grow min-h-[210px] p-3.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white resize-none"></textarea>
+                        <div class="flex gap-2">
+                            <button onclick="saveVideoSideNote()" class="flex-grow py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md">
+                                <i class="fa-solid fa-floppy-disk"></i> Save to Smart Notes
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1011,12 +1164,135 @@
                 <div id="recordingsList" class="flex flex-col gap-3"></div>
             </div>
 
-            <!-- NOTES TAB -->
+            <!-- NOTES TAB (PHASE 4: THE "SMART NOTES" WORD-LIKE STUDIO UPGRADE) -->
             <div id="content-notes" class="tab-content hidden h-full flex flex-col gap-4 overflow-y-auto pr-2 pb-20">
-                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 shrink-0">
-                    <textarea id="noteInput" placeholder="Write an important note or idea..." class="w-full p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 mb-4 min-h-[120px] transition dark:text-white"></textarea>
-                    <div class="flex justify-end"><button onclick="addNote()" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold shadow-md flex items-center gap-2"><i class="fa-solid fa-plus"></i> Add Note</button></div>
+                <!-- Smart Notes Filter, Category & Export Action Bar -->
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between shrink-0">
+                    <!-- Category Filter Tabs + Add Custom Category -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 lg:pb-0" id="noteCategoryTabs"></div>
+
+                    <!-- Search Notes & Smart .txt Export Actions -->
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        <div class="relative flex-grow sm:w-56">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                            <input type="text" id="noteSearchInput" oninput="renderNotes()" placeholder="Search title, text, or #tags..." class="w-full pl-8 pr-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white">
+                        </div>
+                        <button onclick="promptAddNoteCategory()" title="Create New Note Category" class="px-3 py-2 rounded-xl bg-brand-50 dark:bg-brand-500/15 hover:bg-brand-600 text-brand-600 dark:text-brand-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition border border-brand-200/60 dark:border-brand-500/30">
+                            <i class="fa-solid fa-folder-plus"></i> <span>+ Category</span>
+                        </button>
+                        <button onclick="exportFilteredNotesTxt()" title="Export Currently Filtered Notes to .txt" class="px-3.5 py-2 rounded-xl bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-600 text-cyan-700 dark:text-cyan-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition border border-cyan-200/60 dark:border-cyan-500/30">
+                            <i class="fa-solid fa-file-export"></i> <span>Export View (.txt)</span>
+                        </button>
+                        <button onclick="exportAllSubjectNotesTxt()" title="Export All Subject Notes to .txt" class="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-600 text-emerald-700 dark:text-emerald-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition border border-emerald-200/60 dark:border-emerald-500/30">
+                            <i class="fa-solid fa-download"></i> <span>Export All (.txt)</span>
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Word-Like Smart Notes Editor Studio -->
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 shrink-0">
+                    <!-- Active Live-Editing Banner (Shown when editing an existing note in place) -->
+                    <div id="noteEditModeBanner" class="hidden mb-3.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-brand-500/15 via-cyan-500/10 to-transparent border border-brand-500/30 items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5 text-xs font-extrabold text-brand-600 dark:text-brand-300">
+                            <span class="w-2.5 h-2.5 rounded-full bg-brand-500 animate-ping"></span>
+                            <span id="noteEditModeLabel">Live Editing Note — All keystrokes auto-saving in real time</span>
+                        </div>
+                        <button onclick="resetNoteEditor()" class="px-3 py-1 rounded-xl bg-white dark:bg-gray-900 hover:bg-brand-600 hover:text-white text-gray-700 dark:text-gray-200 font-bold text-xs transition shadow-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Done / New Note
+                        </button>
+                    </div>
+
+                    <!-- Note Metadata Row: Title, Category, Tags, Color, Pin -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3">
+                        <div class="md:col-span-5 relative">
+                            <i class="fa-solid fa-heading absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-400 text-xs"></i>
+                            <input type="text" id="noteTitleInput" oninput="handleSmartNoteInput()" placeholder="Note Title (e.g., Lecture 04: B-Trees & Indexing)..." class="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-extrabold focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white">
+                        </div>
+                        <div class="md:col-span-3">
+                            <select id="noteCategorySelect" onchange="handleSmartNoteInput()" class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs sm:text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white"></select>
+                        </div>
+                        <div class="md:col-span-3 relative">
+                            <i class="fa-solid fa-tags absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400 text-xs"></i>
+                            <input type="text" id="noteTagsInput" oninput="handleSmartNoteInput()" placeholder="Tags (comma-separated)..." class="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white">
+                        </div>
+                        <div class="md:col-span-1 flex items-center justify-end gap-1.5">
+                            <select id="noteColorSelect" onchange="handleSmartNoteInput()" title="Note Card Accent" class="px-2 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white">
+                                <option value="violet">🟣</option>
+                                <option value="cyan">🔵</option>
+                                <option value="emerald">🟢</option>
+                                <option value="amber">🟡</option>
+                                <option value="pink">🩷</option>
+                            </select>
+                            <button type="button" id="notePinBtn" onclick="toggleEditorNotePin()" title="Pin Note to Top" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-amber-500 flex items-center justify-center transition">
+                                <i class="fa-solid fa-thumbtack text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MS Word-Like Rich Text Formatting Ribbon -->
+                    <div class="flex flex-wrap items-center gap-1 p-2 mb-2.5 bg-gray-50 dark:bg-gray-900/90 rounded-2xl border border-gray-200 dark:border-gray-700">
+                        <button type="button" onclick="execNoteFormat('undo')" title="Undo (Ctrl+Z)" class="rte-tool-btn text-gray-600 dark:text-gray-300"><i class="fa-solid fa-rotate-left"></i></button>
+                        <button type="button" onclick="execNoteFormat('redo')" title="Redo (Ctrl+Y)" class="rte-tool-btn text-gray-600 dark:text-gray-300"><i class="fa-solid fa-rotate-right"></i></button>
+                        <div class="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+
+                        <button type="button" onclick="execNoteBlock('H1')" title="Heading 1" class="rte-tool-btn text-gray-700 dark:text-gray-200 font-extrabold">H1</button>
+                        <button type="button" onclick="execNoteBlock('H2')" title="Heading 2" class="rte-tool-btn text-gray-700 dark:text-gray-200 font-extrabold">H2</button>
+                        <button type="button" onclick="execNoteBlock('P')" title="Normal Paragraph" class="rte-tool-btn text-gray-700 dark:text-gray-200">¶</button>
+                        <button type="button" onclick="execNoteBlock('BLOCKQUOTE')" title="Callout Quote" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-quote-left"></i></button>
+                        <div class="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+
+                        <button type="button" onclick="execNoteFormat('bold')" title="Bold (Ctrl+B)" class="rte-tool-btn text-gray-800 dark:text-gray-100"><i class="fa-solid fa-bold"></i></button>
+                        <button type="button" onclick="execNoteFormat('italic')" title="Italic (Ctrl+I)" class="rte-tool-btn text-gray-800 dark:text-gray-100"><i class="fa-solid fa-italic"></i></button>
+                        <button type="button" onclick="execNoteFormat('underline')" title="Underline (Ctrl+U)" class="rte-tool-btn text-gray-800 dark:text-gray-100"><i class="fa-solid fa-underline"></i></button>
+                        <button type="button" onclick="execNoteFormat('strikeThrough')" title="Strikethrough" class="rte-tool-btn text-gray-800 dark:text-gray-100"><i class="fa-solid fa-strikethrough"></i></button>
+                        <div class="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+
+                        <button type="button" onclick="execNoteFormat('insertUnorderedList')" title="Bullet List" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-list-ul"></i></button>
+                        <button type="button" onclick="execNoteFormat('insertOrderedList')" title="Numbered List" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-list-ol"></i></button>
+                        <div class="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+
+                        <button type="button" onclick="execNoteFormat('justifyLeft')" title="Align Left" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-align-left"></i></button>
+                        <button type="button" onclick="execNoteFormat('justifyCenter')" title="Align Center" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-align-center"></i></button>
+                        <button type="button" onclick="execNoteFormat('justifyRight')" title="Align Right" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-align-right"></i></button>
+                        <button type="button" onclick="execNoteFormat('justifyFull')" title="Justify Text" class="rte-tool-btn text-gray-700 dark:text-gray-200"><i class="fa-solid fa-align-justify"></i></button>
+                        <div class="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+
+                        <button type="button" onclick="insertNoteHighlight()" title="Highlight Selected Text" class="rte-tool-btn text-amber-500"><i class="fa-solid fa-highlighter"></i></button>
+                        <button type="button" onclick="execNoteFormat('insertHorizontalRule')" title="Insert Horizontal Divider" class="rte-tool-btn text-gray-600 dark:text-gray-300"><i class="fa-solid fa-minus"></i></button>
+                        <button type="button" onclick="execNoteFormat('removeFormat')" title="Clear All Formatting" class="rte-tool-btn text-rose-500"><i class="fa-solid fa-eraser"></i></button>
+
+                        <div class="ml-auto flex items-center gap-3 pr-2 text-[11px] font-bold text-gray-400">
+                            <span id="noteDraftStatus" class="text-emerald-500 flex items-center gap-1"><i class="fa-solid fa-shield-halved"></i> Draft Protected</span>
+                            <span id="noteWordCount" class="font-mono">0 words • 0 chars</span>
+                        </div>
+                    </div>
+
+                    <!-- Rich Text ContentEditable Surface -->
+                    <div id="noteRichEditor" contenteditable="true" oninput="handleSmartNoteInput()" data-placeholder="Write structured lecture notes, formulas, bullet lists, or summaries here... (Supports Bold, Italic, Underline, Headings, Lists, Alignments & Instant Crash Recovery)" class="smart-rich-editor w-full p-4 bg-gray-50/70 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500 mb-4 min-h-[150px] max-h-[380px] overflow-y-auto transition dark:text-white text-sm"></div>
+                    <!-- Legacy hidden textarea kept synced so any external script reading #noteInput continues to work -->
+                    <textarea id="noteInput" class="hidden"></textarea>
+
+                    <!-- Editor Action Footer -->
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="text-xs font-semibold text-gray-400 flex items-center gap-2">
+                            <i class="fa-solid fa-bolt text-amber-400"></i>
+                            <span>Tip: Click any saved note card below to edit it live in-place, or export any note to <code class="font-mono text-brand-500">.txt</code> in one click.</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 ml-auto">
+                            <button type="button" onclick="resetNoteEditor()" class="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold text-xs sm:text-sm transition">
+                                Clear / New
+                            </button>
+                            <button type="button" onclick="exportCurrentEditorNoteTxt()" class="px-4 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500 text-cyan-600 dark:text-cyan-300 hover:text-white font-bold text-xs sm:text-sm transition flex items-center gap-2 border border-cyan-500/25">
+                                <i class="fa-solid fa-file-lines"></i> Export Editor (.txt)
+                            </button>
+                            <button type="button" id="saveSmartNoteBtn" onclick="addNote()" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md flex items-center gap-2">
+                                <i class="fa-solid fa-floppy-disk" id="saveSmartNoteBtnIcon"></i> <span id="saveSmartNoteBtnText">Save Smart Note</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Saved Smart Notes Grid -->
                 <div id="notesList" class="grid gap-4 grid-cols-1 md:grid-cols-2"></div>
             </div>
 
@@ -1390,7 +1666,7 @@
                             <i class="fa-solid fa-folder-open w-4 text-center"></i> <span>File Storage & Paths</span>
                         </button>
                         <button onclick="switchSettingsTab('audio')" id="stab-audio" class="settings-tab-btn px-3.5 py-2.5 rounded-xl text-left font-bold text-xs sm:text-sm flex items-center gap-3 transition whitespace-nowrap">
-                            <i class="fa-solid fa-Wave-square fa-music w-4 text-center"></i> <span>Audio & Sound</span>
+                            <i class="fa-solid fa-wave-square fa-music w-4 text-center"></i> <span>Audio & Sound</span>
                         </button>
                         <button onclick="switchSettingsTab('display')" id="stab-display" class="settings-tab-btn px-3.5 py-2.5 rounded-xl text-left font-bold text-xs sm:text-sm flex items-center gap-3 transition whitespace-nowrap">
                             <i class="fa-solid fa-palette w-4 text-center"></i> <span>Interface & Display</span>
@@ -1560,7 +1836,7 @@
 
                             <!-- Default Launch Window Mode (Fullscreen vs Windowed) -->
                             <div class="p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/70 border border-gray-200/80 dark:border-gray-700">
-                                <h5 class="font-extrabold text-sm flex items-center gap-2 mb-1"><i class="fa-solid fa-Window-maximize fa-expand text-emerald-500"></i> Default Launch Window Mode</h5>
+                                <h5 class="font-extrabold text-sm flex items-center gap-2 mb-1"><i class="fa-solid fa-window-maximize fa-expand text-emerald-500"></i> Default Launch Window Mode</h5>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Choose whether Study Hub opens by default in Windowed Mode or Fullscreen Mode.</p>
                                 <div class="grid grid-cols-2 gap-2">
                                     <button onclick="setLaunchWindowMode('windowed')" id="launchModeBtn-windowed" class="p-3 rounded-xl border-2 font-bold text-xs flex flex-col items-center gap-1.5 transition">
@@ -1741,16 +2017,84 @@
             mixerMuted: false,
             mixerLevels: {}
         });
-        const emptyState = () => ({ subjects: [], pdfs: [], videos: [], recordings: [], notes: [], tasks: [], flashcards: [], whiteboards: [], deadlines: [], links: [], customSounds: [], settings: defaultSettings(), activity: {}, subjectTimes: {}, pomodorosCompleted: 0, pomodoroDays: {}, currentSubjectId: null });
+        const DEFAULT_NOTE_CATEGORIES = ["General", "Lectures", "Exam Prep", "Summaries", "Projects", "Research", "Important"];
+        const emptyState = () => ({ subjects: [], pdfs: [], videos: [], recordings: [], notes: [], noteCategories: [...DEFAULT_NOTE_CATEGORIES], tasks: [], flashcards: [], whiteboards: [], deadlines: [], links: [], customSounds: [], settings: defaultSettings(), activity: {}, subjectTimes: {}, pomodorosCompleted: 0, pomodoroDays: {}, currentSubjectId: null, _lastSavedAt: 0 });
         function normalizeState() {
             ['subjects','pdfs','videos','recordings','notes','tasks','flashcards','whiteboards','deadlines','links','customSounds'].forEach(k => { if(!Array.isArray(state[k])) state[k] = []; });
+            if(!Array.isArray(state.noteCategories) || state.noteCategories.length === 0) {
+                state.noteCategories = [...DEFAULT_NOTE_CATEGORIES];
+            } else {
+                DEFAULT_NOTE_CATEGORIES.forEach(cat => { if(!state.noteCategories.includes(cat)) state.noteCategories.push(cat); });
+            }
             ['activity','subjectTimes','pomodoroDays'].forEach(k => { if(!state[k] || typeof state[k] !== 'object') state[k] = {}; });
             state.settings = { ...defaultSettings(), ...(state.settings || {}) };
             if(!state.settings.mixerLevels || typeof state.settings.mixerLevels !== 'object') state.settings.mixerLevels = {};
             if(!state.pomodorosCompleted) state.pomodorosCompleted = 0;
-            state.subjects.forEach(s => { if(!s.icon) s.icon = iconsList[0]; if(!s.color) s.color = colorsList[0].grad; if(LEGACY_COLORS[s.color]) s.color = LEGACY_COLORS[s.color]; });
+            state.subjects.forEach(s => { if(!s.icon) s.icon = iconsList[0]; if(!s.color) s.color = colorsList[0].grad; if(LEGACY_COLORS[s.color]) s.color = LEGACY_COLORS[s.color]; if(!Array.isArray(s.folders)) s.folders = ["Lectures", "Tutorials", "Assignments", "Quizzes", "Labs", "References"]; });
+            state.notes.forEach(n => {
+                if(!n.category) n.category = 'General';
+                if(!state.noteCategories.includes(n.category)) state.noteCategories.push(n.category);
+                if(!Array.isArray(n.tags)) n.tags = [];
+                if(typeof n.pinned !== 'boolean') n.pinned = false;
+                if(!n.title) {
+                    const plain = (n.text || '').replace(/\s+/g, ' ').trim();
+                    n.title = plain ? (plain.length > 48 ? plain.slice(0, 48) + '…' : plain) : 'Untitled Note';
+                }
+                if(!n.html) {
+                    n.html = esc(n.text || '').replace(/\n/g, '<br>');
+                }
+            });
         }
-        let dataLoaded = false, saveTimer = null, dirty = false;
+        let dataLoaded = false, saveTimer = null, draftTimer = null, dirty = false, isSavingNow = false;
+        const LOCAL_MIRROR_KEY = 'studyhub_state_mirror_v2';
+        const LOCAL_DRAFT_KEY = 'studyhub_unsaved_draft_v2';
+
+        function updateAutoSaveBadge(mode, labelText) {
+            const badge = document.getElementById('autoSaveBadge');
+            const icon = document.getElementById('autoSaveIcon');
+            const txt = document.getElementById('autoSaveText');
+            if (!badge || !icon || !txt) return;
+            txt.textContent = labelText || 'Zero-Loss Ready';
+            if (mode === 'saving') {
+                badge.className = 'hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition-all';
+                icon.className = 'fa-solid fa-rotate fa-spin text-amber-500';
+            } else if (mode === 'draft') {
+                badge.className = 'hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 transition-all';
+                icon.className = 'fa-solid fa-pen-nib text-cyan-500';
+            } else if (mode === 'error') {
+                badge.className = 'hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800 transition-all';
+                icon.className = 'fa-solid fa-triangle-exclamation text-rose-500';
+            } else {
+                badge.className = 'hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-all';
+                icon.className = 'fa-solid fa-shield-halved text-indigo-500';
+            }
+        }
+
+        function cacheLocalMirror() {
+            if (!dataLoaded) return;
+            try {
+                state._lastSavedAt = Date.now();
+                localStorage.setItem(LOCAL_MIRROR_KEY, JSON.stringify({ state, dirty, timestamp: state._lastSavedAt }));
+            } catch (e) {}
+        }
+
+        function saveUnsavedDraftSnapshot(draftPayload) {
+            try {
+                if (!draftPayload) {
+                    localStorage.removeItem(LOCAL_DRAFT_KEY);
+                } else {
+                    localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(draftPayload));
+                }
+            } catch (e) {}
+            clearTimeout(draftTimer);
+            draftTimer = setTimeout(() => {
+                fetch(`${API_URL}/autosave_draft`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ draft: draftPayload || null })
+                }).catch(() => {});
+            }, 350);
+        }
 
         // Small in-app text prompt (window.prompt() is not reliable inside the desktop window)
         function requestInput(title, placeholder, callback) {
@@ -1774,7 +2118,7 @@
 
         // Open saved links in the real browser (window.open does nothing inside the app window)
         function openLink(url) {
-            fetch(`${API_URL}/open_url?url=${encodeURIComponent(url)}`).then(r => { if(!r.ok) showToast('Could not open link', true); }).catch(() => window.open(url, '_blank'));
+            fetch(`${API_URL}/open_url?url=${encodeURIComponent(url)}`).then(r => { if(!r.ok) showToast('Could not open link', true); }).catch(() => {});
         }
         function openSearchResult(sub, tab, itemId = null) {
             closeSearchModal();
@@ -1782,6 +2126,7 @@
             openSubject(sub); switchTab(tab);
             if(tab === 'recordings' && itemId) setTimeout(() => loadVoiceRecording(itemId, true), 80);
             if(tab === 'videos' && itemId) setTimeout(() => loadVideoTrack(itemId, true), 80);
+            if(tab === 'notes' && itemId) setTimeout(() => editSmartNote(itemId), 80);
         }
         function recordSubjectTime() {
             if (subjectEntryTime > 0 && state.currentSubjectId) {
@@ -1799,9 +2144,9 @@
         let breakInterval;
 
         let state = { 
-            subjects: [], pdfs: [], videos: [], recordings: [], notes: [], tasks: [], 
+            subjects: [], pdfs: [], videos: [], recordings: [], notes: [], noteCategories: [...DEFAULT_NOTE_CATEGORIES], tasks: [], 
             flashcards: [], whiteboards: [], deadlines: [], links: [], activity: {}, 
-            subjectTimes: {}, pomodorosCompleted: 0, currentSubjectId: null 
+            subjectTimes: {}, pomodorosCompleted: 0, currentSubjectId: null, _lastSavedAt: 0
         };
         
         const iconsList = ['fa-graduation-cap', 'fa-book-open', 'fa-laptop-code', 'fa-calculator', 'fa-flask', 'fa-language', 'fa-brain', 'fa-chart-pie', 'fa-project-diagram', 'fa-atom', 'fa-globe', 'fa-paintbrush'];
@@ -1839,6 +2184,7 @@
 
             initSearch();
             initAllModulesAndSettings();
+            initSmartNotesEditorEvents();
             updateGreeting();
             setInterval(updateGreeting, 10 * 60000);
             renderHeatmap();
@@ -1846,22 +2192,34 @@
             setInterval(updateUptimeStats, 60000); // Check uptime every minute
             setupSplitScreenResizer();
             goToHome();
+            restoreAnyUnsavedNoteDraft();
 
-            // Autosave: every 60s, also stores study time of the subject you're currently in
+            // Aggressive background auto-save loop (every 4 seconds if dirty, plus study time every 45s)
             setInterval(() => {
-                recordSubjectTime();
-                if(state.currentSubjectId) dirty = true;
-                if(dirty) flushSave();
-            }, 60000);
-            // Last-chance save when the window closes or is hidden
+                if (dirty && !isSavingNow) flushSave();
+            }, 4000);
+            setInterval(() => {
+                if (state.currentSubjectId) {
+                    recordSubjectTime();
+                    dirty = true;
+                    flushSave();
+                }
+            }, 45000);
+
+            // Last-chance atomic save when the window closes or is hidden
             const beaconSave = () => {
                 if(!dataLoaded) return;
                 recordSubjectTime();
+                commitActiveDraftBeforeExit();
+                cacheLocalMirror();
                 try { navigator.sendBeacon(`${API_URL}/data`, new Blob([JSON.stringify(state)], { type: 'application/json' })); } catch(e) {}
             };
             window.addEventListener('beforeunload', beaconSave);
             document.addEventListener('visibilitychange', () => {
-                if(document.visibilityState === 'hidden' && dirty) flushSave();
+                if(document.visibilityState === 'hidden') {
+                    commitActiveDraftBeforeExit();
+                    if(dirty) flushSave();
+                }
                 evaluatePerformanceThrottle();
             });
         });
@@ -1869,6 +2227,7 @@
         function exitApp() {
             requestConfirm("Are you sure you want to close the workspace?", async () => {
                 recordSubjectTime();
+                commitActiveDraftBeforeExit();
                 try { await flushSave(); await fetch('/api/exit', { method: 'POST' }); } catch(e) {}
                 window.close();
             });
@@ -1879,34 +2238,89 @@
                 const res = await fetch(`${API_URL}/data`);
                 if(!res.ok) throw new Error("Server error");
                 const data = await res.json();
+                const recoveredFromBackup = !!data._recoveredFrom;
+                const serverDraft = data._unsavedDraft || null;
+                delete data._recoveredFrom;
+                delete data._unsavedDraft;
+
                 if(data && Object.keys(data).length > 0) state = { ...state, ...data };
+
+                // Check if local mirror has an un-flushed newer state from an unexpected browser/power crash
+                try {
+                    const rawMirror = localStorage.getItem(LOCAL_MIRROR_KEY);
+                    if (rawMirror) {
+                        const mirror = JSON.parse(rawMirror);
+                        if (mirror && mirror.dirty && mirror.state && Array.isArray(mirror.state.subjects)) {
+                            const serverTs = state._lastSavedAt || 0;
+                            if ((mirror.timestamp || 0) > serverTs) {
+                                state = { ...state, ...mirror.state };
+                                dirty = true;
+                                showToast("Recovered unsaved session progress from crash guard 🛡️");
+                            }
+                        }
+                    }
+                } catch (e) {}
+
+                if (serverDraft && !localStorage.getItem(LOCAL_DRAFT_KEY)) {
+                    try { localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(serverDraft)); } catch (e) {}
+                }
+
                 normalizeState();
                 dataLoaded = true;
                 updateServerStatus(true);
+                updateAutoSaveBadge('saved', recoveredFromBackup ? 'Recovered Backup' : 'Zero-Loss Ready');
+                if (recoveredFromBackup) {
+                    showToast("Primary database was repaired automatically from backup 🛡️");
+                }
+                if (dirty) flushSave();
             } catch (err) {
+                // Offline fallback to local mirror so user never loses access to their work
+                try {
+                    const rawMirror = localStorage.getItem(LOCAL_MIRROR_KEY);
+                    if (rawMirror) {
+                        const mirror = JSON.parse(rawMirror);
+                        if (mirror && mirror.state) {
+                            state = { ...state, ...mirror.state };
+                            normalizeState();
+                            dataLoaded = true;
+                        }
+                    }
+                } catch (e) {}
                 updateServerStatus(false);
-                showToast("Could not load your data - saving is paused so nothing gets overwritten.", true);
+                updateAutoSaveBadge('error', 'Local Cache Active');
+                showToast("Server unreachable — working from local Zero-Loss cache.", true);
             }
         }
 
-        // Debounced: many actions in a row = one save (whiteboards make the data large)
+        // Debounced atomic save with immediate local mirror write
         function saveData() {
             if(!dataLoaded) return;
             dirty = true;
+            cacheLocalMirror();
+            updateAutoSaveBadge('saving', 'Auto-Saving...');
             renderHeatmap();
             clearTimeout(saveTimer);
-            saveTimer = setTimeout(flushSave, 400);
+            saveTimer = setTimeout(flushSave, 350);
         }
         async function flushSave() {
-            if(!dataLoaded) return;
+            if(!dataLoaded || isSavingNow) return;
             clearTimeout(saveTimer);
+            isSavingNow = true;
             try {
+                state._lastSavedAt = Date.now();
+                cacheLocalMirror();
                 const res = await fetch(`${API_URL}/data`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state) });
                 if(!res.ok) throw new Error('save failed');
                 dirty = false;
+                cacheLocalMirror();
                 updateServerStatus(true);
+                const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                updateAutoSaveBadge('saved', `Saved ${timeStr}`);
             } catch (err) {
-                updateServerStatus(false); showToast("Data not saved! Server error.", true);
+                updateServerStatus(false);
+                updateAutoSaveBadge('error', 'Cached Locally (RetryQueued)');
+            } finally {
+                isSavingNow = false;
             }
         }
 
@@ -1997,45 +2411,7 @@
             }
         }
 
-        // [INJECTED] Audio Alerts & Focus Music
-        function playBeep() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(800, ctx.currentTime);
-                osc.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.3);
-            } catch(e) {}
-        }
-
-        let loFiAudioCtx = null, loFiNoise = null, isLoFiPlaying = false;
-        function toggleLoFi() {
-            if (isLoFiPlaying) {
-                if(loFiNoise) loFiNoise.disconnect();
-                isLoFiPlaying = false;
-                document.getElementById('lofiIcon').classList.replace('fa-volume-high', 'fa-music');
-                showToast('Focus Music Paused'); return;
-            }
-            try {
-                if (!loFiAudioCtx) loFiAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const bufferSize = loFiAudioCtx.sampleRate * 2;
-                const buffer = loFiAudioCtx.createBuffer(1, bufferSize, loFiAudioCtx.sampleRate);
-                const output = buffer.getChannelData(0);
-                let lastOut = 0;
-                for (let i = 0; i < bufferSize; i++) {
-                    const white = Math.random() * 2 - 1;
-                    output[i] = (lastOut + (0.02 * white)) / 1.02;
-                    lastOut = output[i]; output[i] *= 3.5;
-                }
-                loFiNoise = loFiAudioCtx.createBufferSource();
-                loFiNoise.buffer = buffer; loFiNoise.loop = true;
-                const gainNode = loFiAudioCtx.createGain();
-                gainNode.gain.value = 0.05;
-                loFiNoise.connect(gainNode); gainNode.connect(loFiAudioCtx.destination);
-                loFiNoise.start(); isLoFiPlaying = true;
-                document.getElementById('lofiIcon').classList.replace('fa-music', 'fa-volume-high');
-                showToast('Focus Music Playing 🎵');
-            } catch(e) { showToast('Audio not supported', true); }
-        }
+        // [PHASE 1 CLEANUP] Removed duplicate legacy playBeep & toggleLoFi definitions (canonical definitions at line ~4076)
 
         function requestConfirm(message, callback) {
             document.getElementById('confirmMessage').textContent = message;
@@ -2482,6 +2858,7 @@
 
         // ================= VIDEOS STUDIO & WAVESURFER PLAYER =================
         let videoWaveSurfer = null, activeVideoId = null, videoLoop = false, videoSpeed = 1, videoMuted = false, videoEventsBound = false;
+        let videoTheatreExpanded = false, videoFitCover = false, videoSideNotesOpen = false;
 
         function bindStudioVideoEvents() {
             if (videoEventsBound) return;
@@ -2548,7 +2925,7 @@
                     interact: true
                 });
                 videoWaveSurfer.on('ready', () => {
-                    document.getElementById('videoWaveformHint').classList.add('hidden');
+                    document.getElementById('videoWaveformHint')?.classList.add('hidden');
                 });
                 return videoWaveSurfer;
             } catch (e) {
@@ -2563,6 +2940,100 @@
                 const id = el.getAttribute('data-vid-play-icon');
                 el.className = (id === activeVideoId && isPlaying) ? 'fa-solid fa-pause' : 'fa-solid fa-play';
             });
+        }
+
+        function toggleVideoTheatreMode() {
+            const deck = document.getElementById('videoPlayerDeck');
+            const txt = document.getElementById('videoTheatreBtnText');
+            const btn = document.getElementById('videoTheatreBtn');
+            if (!deck) return;
+            videoTheatreExpanded = !videoTheatreExpanded;
+            deck.classList.toggle('video-theatre-expanded', videoTheatreExpanded);
+            if (txt) txt.textContent = videoTheatreExpanded ? 'Standard Size' : 'Cinema Size';
+            if (btn) {
+                btn.className = videoTheatreExpanded
+                    ? 'px-3 py-1.5 rounded-xl bg-brand-600 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm'
+                    : 'px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-brand-500 hover:text-white text-gray-600 dark:text-gray-300 text-xs font-bold flex items-center gap-1.5 transition';
+            }
+        }
+
+        function toggleVideoFitMode() {
+            const v = document.getElementById('studioVideoPlayer');
+            const txt = document.getElementById('videoFitBtnText');
+            if (!v) return;
+            videoFitCover = !videoFitCover;
+            v.classList.toggle('video-fit-cover', videoFitCover);
+            if (txt) txt.textContent = videoFitCover ? 'Fit: Fill' : 'Fit: Contain';
+        }
+
+        function toggleVideoSideNotes() {
+            const panel = document.getElementById('videoSideNotesPanel');
+            const grid = document.getElementById('videoStudioGrid');
+            const btn = document.getElementById('videoSideNotesBtn');
+            if (!panel || !grid) return;
+            videoSideNotesOpen = !videoSideNotesOpen;
+            if (videoSideNotesOpen) {
+                panel.classList.remove('hidden');
+                panel.classList.add('flex');
+                grid.className = 'grid grid-cols-1 lg:grid-cols-3 gap-5 items-start';
+                const playerCard = grid.children[0];
+                if (playerCard) playerCard.className = 'lg:col-span-2 bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700';
+                if (btn) btn.className = 'px-3 py-1.5 rounded-xl bg-brand-600 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm';
+                const vid = (state.videos || []).find(x => x.id === activeVideoId);
+                const titleIn = document.getElementById('videoNoteTitleInput');
+                if (vid && titleIn && !titleIn.value.trim()) titleIn.value = `Lecture Notes: ${vid.title}`;
+            } else {
+                panel.classList.add('hidden');
+                panel.classList.remove('flex');
+                grid.className = 'grid grid-cols-1 gap-5 items-start';
+                const playerCard = grid.children[0];
+                if (playerCard) playerCard.className = 'bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700';
+                if (btn) btn.className = 'px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-500/15 hover:bg-brand-600 text-brand-600 dark:text-brand-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition';
+            }
+        }
+
+        function insertVideoTimestampNote() {
+            const v = document.getElementById('studioVideoPlayer');
+            const ta = document.getElementById('videoQuickNoteInput');
+            if (!ta) return;
+            const cur = v ? (v.currentTime || 0) : 0;
+            const stamp = `[${formatDuration(cur)}] `;
+            const start = ta.selectionStart ?? ta.value.length;
+            const end = ta.selectionEnd ?? ta.value.length;
+            const prefix = (start > 0 && ta.value[start - 1] !== '\n') ? '\n' : '';
+            ta.value = ta.value.slice(0, start) + prefix + stamp + ta.value.slice(end);
+            ta.focus();
+            const pos = start + prefix.length + stamp.length;
+            ta.setSelectionRange(pos, pos);
+        }
+
+        function saveVideoSideNote() {
+            const ta = document.getElementById('videoQuickNoteInput');
+            const titleIn = document.getElementById('videoNoteTitleInput');
+            if (!ta) return;
+            const rawText = ta.value.trim();
+            if (!rawText) return showToast('Write some lecture notes before saving!', true);
+            const vid = (state.videos || []).find(x => x.id === activeVideoId);
+            const title = (titleIn && titleIn.value.trim()) || (vid ? `Lecture Notes: ${vid.title}` : 'Video Lecture Note');
+            const noteObj = {
+                id: 'note_' + Date.now(),
+                subjectId: state.currentSubjectId,
+                title,
+                category: 'Lectures',
+                tags: vid ? ['video', vid.title.slice(0, 24)] : ['video'],
+                color: 'cyan',
+                pinned: false,
+                text: rawText,
+                html: esc(rawText).replace(/\[(\d{2}:\d{2})\]/g, '<strong class="text-cyan-600 dark:text-cyan-400">[$1]</strong>').replace(/\n/g, '<br>'),
+                date: new Date().toLocaleDateString('en-GB') + ' • ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                updatedAt: Date.now()
+            };
+            state.notes.unshift(noteObj);
+            saveData();
+            trackActivity();
+            updateSubjectStats(state.currentSubjectId);
+            ta.value = '';
+            showToast('Timestamped note saved to Smart Notes! 📝');
         }
 
         async function handleVideoUpload(e) {
@@ -2611,7 +3082,7 @@
             if (!vid) return;
             bindStudioVideoEvents();
             const vEl = document.getElementById('studioVideoPlayer');
-            if (activeVideoId === id) {
+            if (activeVideoId === id && vEl.getAttribute('src')) {
                 if (autoPlay) toggleVideoPlayPause();
                 return;
             }
@@ -2620,6 +3091,8 @@
             document.getElementById('videoTrackMeta').textContent = `${vid.date} • ${vid.duration || 'Video'}`;
             document.getElementById('videoCurrentTime').textContent = '00:00';
             document.getElementById('videoEmptyOverlay').classList.add('hidden');
+            const titleIn = document.getElementById('videoNoteTitleInput');
+            if (titleIn) titleIn.value = `Lecture Notes: ${vid.title}`;
             renderVideosListOnly();
 
             const url = `${FILES_URL}/${encodeURIComponent(vid.filename)}`;
@@ -2743,7 +3216,7 @@
                     document.getElementById('videoDuration').textContent = '00:00';
                     document.getElementById('videoSeekSlider').value = 0;
                     document.getElementById('videoEmptyOverlay').classList.remove('hidden');
-                    document.getElementById('videoWaveformHint').classList.remove('hidden');
+                    document.getElementById('videoWaveformHint')?.classList.remove('hidden');
                     updateVideoPlayerIcons(false);
                 }
                 saveData(); renderVideosListOnly(); updateSubjectStats(state.currentSubjectId);
@@ -2763,12 +3236,13 @@
         function renderVideosListOnly() {
             const list = document.getElementById('videosList');
             if (!list) return;
-            const subVids = (state.videos || []).filter(v => v.subjectId === state.currentSubjectId);
+            const filterQ = (document.getElementById('videoFilterInput')?.value || '').toLowerCase().trim();
+            const subVids = (state.videos || []).filter(v => v.subjectId === state.currentSubjectId && (!filterQ || (v.title || '').toLowerCase().includes(filterQ)));
             if (subVids.length === 0) {
                 list.innerHTML = `<div class="bg-white dark:bg-gray-800 rounded-2xl p-10 text-center border border-dashed border-gray-300 dark:border-gray-700 text-gray-400">
                     <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center mx-auto mb-3 text-2xl"><i class="fa-solid fa-clapperboard"></i></div>
-                    <p class="font-bold text-gray-600 dark:text-gray-300">No videos uploaded yet</p>
-                    <p class="text-xs mt-1">Click "Upload Videos" above to add lecture videos, tutorials, or screen recordings.</p>
+                    <p class="font-bold text-gray-600 dark:text-gray-300">${filterQ ? 'No matching videos found' : 'No videos uploaded yet'}</p>
+                    <p class="text-xs mt-1">${filterQ ? 'Try clearing the video filter above.' : 'Click "Upload Videos" above to add lecture videos, tutorials, or screen recordings.'}</p>
                 </div>`;
                 return;
             }
@@ -3591,36 +4065,675 @@
             });
         }
 
-        // ================= NOTES SYSTEM =================
+        // ================= SMART NOTES STUDIO (PHASE 4) =================
+        let editingNoteId = null;
+        let activeNoteCategoryFilter = 'All';
+        let editorNotePinned = false;
+        let liveNoteEditTimer = null;
+
+        const NOTE_COLOR_MAP = {
+            violet: { card: 'bg-violet-50/90 border-violet-200 dark:bg-violet-500/10 dark:border-violet-400/25', meta: 'text-violet-600 dark:text-violet-300', badge: 'bg-violet-500/15 text-violet-700 dark:text-violet-300' },
+            cyan:   { card: 'bg-cyan-50/90 border-cyan-200 dark:bg-cyan-500/10 dark:border-cyan-400/25', meta: 'text-cyan-600 dark:text-cyan-300', badge: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300' },
+            emerald:{ card: 'bg-emerald-50/90 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-400/25', meta: 'text-emerald-600 dark:text-emerald-300', badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' },
+            amber:  { card: 'bg-amber-50/90 border-amber-200 dark:bg-amber-500/10 dark:border-amber-400/25', meta: 'text-amber-600 dark:text-amber-300', badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
+            pink:   { card: 'bg-pink-50/90 border-pink-200 dark:bg-pink-500/10 dark:border-pink-400/25', meta: 'text-pink-600 dark:text-pink-300', badge: 'bg-pink-500/15 text-pink-700 dark:text-pink-300' }
+        };
+        const NOTE_STYLES = Object.values(NOTE_COLOR_MAP);
+        const noteStyle = (n) => {
+            if (n && n.color && NOTE_COLOR_MAP[n.color]) return NOTE_COLOR_MAP[n.color];
+            const id = (n && n.id) ? n.id : String(n);
+            let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+            return NOTE_STYLES[h % NOTE_STYLES.length];
+        };
+
+        function sanitizeRichHtml(rawHtml) {
+            if (!rawHtml) return '';
+            const template = document.createElement('template');
+            template.innerHTML = String(rawHtml);
+            template.content.querySelectorAll('script, style, iframe, object, embed').forEach(el => el.remove());
+            template.content.querySelectorAll('*').forEach(el => {
+                Array.from(el.attributes).forEach(attr => {
+                    if (attr.name.toLowerCase().startsWith('on')) el.removeAttribute(attr.name);
+                });
+            });
+            return template.innerHTML;
+        }
+
+        function htmlToStructuredPlainText(html, fallbackText = '') {
+            if (!html || !String(html).trim()) return fallbackText || '';
+            let s = String(html);
+            s = s.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '\n# $1\n');
+            s = s.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '\n## $1\n');
+            s = s.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n### $1\n');
+            s = s.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, '\n> $1\n');
+            s = s.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '\n  • $1');
+            s = s.replace(/<hr\s*\/?>/gi, '\n----------------------------------------\n');
+            s = s.replace(/<br\s*\/?>/gi, '\n');
+            s = s.replace(/<\/(p|div|ul|ol|table|tr)>/gi, '\n');
+            const tmp = document.createElement('div');
+            tmp.innerHTML = s;
+            return (tmp.textContent || tmp.innerText || fallbackText || '').replace(/\n{3,}/g, '\n\n').trim();
+        }
+
+        function parseTagsInput(raw) {
+            if (!raw) return [];
+            return String(raw).split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean);
+        }
+
+        function handleSmartNoteInput() {
+            const ed = document.getElementById('noteRichEditor');
+            if (!ed) return;
+            const titleIn = document.getElementById('noteTitleInput');
+            const catSel = document.getElementById('noteCategorySelect');
+            const tagsIn = document.getElementById('noteTagsInput');
+            const colorSel = document.getElementById('noteColorSelect');
+            const plain = htmlToStructuredPlainText(ed.innerHTML, ed.innerText || '');
+            const hiddenInput = document.getElementById('noteInput');
+            if (hiddenInput) hiddenInput.value = plain;
+            const words = plain ? plain.split(/\s+/).filter(Boolean).length : 0;
+            const chars = plain.length;
+            const wcEl = document.getElementById('noteWordCount');
+            if (wcEl) wcEl.textContent = `${words} word${words === 1 ? '' : 's'} • ${chars} chars`;
+
+            if (editingNoteId) {
+                const statusEl = document.getElementById('noteDraftStatus');
+                if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-rotate fa-spin mr-1 text-amber-500"></i> Live syncing changes...';
+                clearTimeout(liveNoteEditTimer);
+                liveNoteEditTimer = setTimeout(() => {
+                    applyLiveEditToNote(editingNoteId, false);
+                }, 350);
+            } else {
+                const draftPayload = {
+                    type: 'main_note',
+                    subjectId: state.currentSubjectId,
+                    title: titleIn ? titleIn.value : '',
+                    category: catSel ? catSel.value : 'General',
+                    tags: tagsIn ? tagsIn.value : '',
+                    color: colorSel ? colorSel.value : 'violet',
+                    pinned: editorNotePinned,
+                    html: ed.innerHTML,
+                    text: plain,
+                    updatedAt: Date.now()
+                };
+                if (plain || (titleIn && titleIn.value.trim())) {
+                    saveUnsavedDraftSnapshot(draftPayload);
+                    updateAutoSaveBadge('draft', 'Draft Protected');
+                    const statusEl = document.getElementById('noteDraftStatus');
+                    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-shield-heart mr-1 text-cyan-500"></i> Draft cached automatically';
+                } else {
+                    saveUnsavedDraftSnapshot(null);
+                }
+            }
+        }
+
+        function handleSplitNoteInput() {
+            const splitEd = document.getElementById('splitNoteEditor');
+            const splitTitle = document.getElementById('splitNoteTitleInput');
+            if (!splitEd) return;
+            const plain = htmlToStructuredPlainText(splitEd.innerHTML, splitEd.innerText || '');
+            const hiddenSplit = document.getElementById('splitNoteInput');
+            if (hiddenSplit) hiddenSplit.value = plain;
+            if (plain || (splitTitle && splitTitle.value.trim())) {
+                saveUnsavedDraftSnapshot({
+                    type: 'split_note',
+                    subjectId: state.currentSubjectId,
+                    title: splitTitle ? splitTitle.value : '',
+                    category: document.getElementById('splitNoteCategorySelect')?.value || 'Lectures',
+                    html: splitEd.innerHTML,
+                    text: plain,
+                    updatedAt: Date.now()
+                });
+            }
+        }
+
+        function initSmartNotesEditorEvents() {
+            const ed = document.getElementById('noteRichEditor');
+            const splitEd = document.getElementById('splitNoteEditor');
+            if (ed) {
+                ed.addEventListener('input', handleSmartNoteInput);
+                ed.addEventListener('keyup', handleSmartNoteInput);
+            }
+            if (splitEd) {
+                splitEd.addEventListener('input', handleSplitNoteInput);
+            }
+        }
+
+        function commitActiveDraftBeforeExit() {
+            try {
+                if (editingNoteId) {
+                    applyLiveEditToNote(editingNoteId, true);
+                    return;
+                }
+                const ed = document.getElementById('noteRichEditor');
+                const titleIn = document.getElementById('noteTitleInput');
+                if (ed && state.currentSubjectId) {
+                    const plain = htmlToStructuredPlainText(ed.innerHTML, ed.innerText || '');
+                    const title = titleIn ? titleIn.value.trim() : '';
+                    if (plain || title) {
+                        saveUnsavedDraftSnapshot({
+                            type: 'main_note',
+                            subjectId: state.currentSubjectId,
+                            title,
+                            category: document.getElementById('noteCategorySelect')?.value || 'General',
+                            tags: document.getElementById('noteTagsInput')?.value || '',
+                            color: document.getElementById('noteColorSelect')?.value || 'violet',
+                            pinned: editorNotePinned,
+                            html: ed.innerHTML,
+                            text: plain,
+                            updatedAt: Date.now()
+                        });
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function restoreAnyUnsavedNoteDraft() {
+            try {
+                const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+                if (!raw) return;
+                const draft = JSON.parse(raw);
+                if (!draft || (!draft.text && !draft.title)) return;
+                const ed = document.getElementById('noteRichEditor');
+                const titleIn = document.getElementById('noteTitleInput');
+                const catSel = document.getElementById('noteCategorySelect');
+                const tagsIn = document.getElementById('noteTagsInput');
+                const colorSel = document.getElementById('noteColorSelect');
+                if (ed && draft.html) ed.innerHTML = sanitizeRichHtml(draft.html);
+                if (titleIn && draft.title) titleIn.value = draft.title;
+                if (catSel && draft.category) catSel.value = draft.category;
+                if (tagsIn && draft.tags) tagsIn.value = draft.tags;
+                if (colorSel && draft.color) colorSel.value = draft.color;
+                const hiddenInput = document.getElementById('noteInput');
+                if (hiddenInput) hiddenInput.value = draft.text || '';
+                const statusEl = document.getElementById('noteDraftStatus');
+                if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-rotate-left mr-1 text-emerald-500"></i> Restored unsaved draft from previous session';
+            } catch (e) {}
+        }
+
+        function execNoteFormat(cmd, value = null) {
+            const ed = document.getElementById('noteRichEditor');
+            if (!ed) return;
+            ed.focus();
+            try { document.execCommand(cmd, false, value); } catch (e) {}
+            ed.dispatchEvent(new Event('input'));
+        }
+
+        function execNoteBlock(tag) {
+            const ed = document.getElementById('noteRichEditor');
+            if (!ed) return;
+            ed.focus();
+            try { document.execCommand('formatBlock', false, tag); } catch (e) {}
+            ed.dispatchEvent(new Event('input'));
+        }
+
+        function insertNoteHighlight() {
+            const ed = document.getElementById('noteRichEditor');
+            if (!ed) return;
+            ed.focus();
+            try {
+                if (!document.execCommand('hiliteColor', false, '#fde047')) {
+                    document.execCommand('backColor', false, '#fde047');
+                }
+            } catch (e) {}
+            ed.dispatchEvent(new Event('input'));
+        }
+
+        function execSplitFormat(cmd, value = null) {
+            const ed = document.getElementById('splitNoteEditor');
+            if (!ed) return;
+            ed.focus();
+            try { document.execCommand(cmd, false, value); } catch (e) {}
+            ed.dispatchEvent(new Event('input'));
+        }
+
+        function toggleEditorNotePin() {
+            editorNotePinned = !editorNotePinned;
+            const btn = document.getElementById('notePinBtn');
+            if (btn) {
+                btn.className = editorNotePinned
+                    ? 'px-3 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm'
+                    : 'px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-amber-500 border border-gray-200 dark:border-gray-700 text-xs font-bold flex items-center gap-1.5 transition';
+            }
+            if (editingNoteId) applyLiveEditToNote(editingNoteId, false);
+        }
+
+        function renderNoteCategoryTabs() {
+            normalizeState();
+            const tabsEl = document.getElementById('noteCategoryTabs');
+            const selEl = document.getElementById('noteCategorySelect');
+            if (selEl) {
+                const curVal = selEl.value || 'General';
+                selEl.innerHTML = state.noteCategories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+                if (state.noteCategories.includes(curVal)) selEl.value = curVal;
+            }
+            if (!tabsEl) return;
+            const subNotes = state.notes.filter(n => n.subjectId === state.currentSubjectId);
+            const allCategories = ['All', ...state.noteCategories];
+            tabsEl.innerHTML = allCategories.map(cat => {
+                const count = cat === 'All' ? subNotes.length : subNotes.filter(n => (n.category || 'General') === cat).length;
+                const isActive = activeNoteCategoryFilter === cat;
+                return `<button onclick="setNoteCategoryFilter('${escJs(cat)}')" class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 whitespace-nowrap shrink-0 transition ${isActive ? 'bg-brand-600 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-500/15 hover:text-brand-600'}">
+                    <span>${esc(cat)}</span>
+                    <span class="px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-500'}">${count}</span>
+                </button>`;
+            }).join('');
+        }
+
+        function setNoteCategoryFilter(category) {
+            activeNoteCategoryFilter = category || 'All';
+            renderNotes();
+        }
+
+        function promptAddNoteCategory() {
+            requestInput('New Note Category / Folder', 'e.g., Lab Reports, Formulas, Midterm', (catName) => {
+                const clean = catName.trim();
+                if (!clean) return;
+                if (!Array.isArray(state.noteCategories)) state.noteCategories = [...DEFAULT_NOTE_CATEGORIES];
+                if (!state.noteCategories.includes(clean)) {
+                    state.noteCategories.push(clean);
+                    saveData();
+                }
+                activeNoteCategoryFilter = clean;
+                renderNoteCategoryTabs();
+                const sel = document.getElementById('noteCategorySelect');
+                if (sel) sel.value = clean;
+                renderNotes();
+                showToast(`Category "${clean}" created! 🗂️`);
+            });
+        }
+
         function saveSplitNote() {
-            const val = document.getElementById('splitNoteInput').value.trim(); if(!val) return;
-            state.notes.unshift({ id: 'note_'+Date.now(), subjectId: state.currentSubjectId, text: val, date: new Date().toLocaleDateString('en-GB') });
-            saveData(); trackActivity(); updateSubjectStats(state.currentSubjectId); 
-            document.getElementById('splitNoteInput').value = ''; showToast('Note saved');
+            const ed = document.getElementById('splitNoteEditor');
+            const fallbackIn = document.getElementById('splitNoteInput');
+            const titleIn = document.getElementById('splitNoteTitleInput');
+            const catSel = document.getElementById('splitNoteCategorySelect');
+            const rawHtml = ed ? sanitizeRichHtml(ed.innerHTML) : '';
+            const plain = htmlToStructuredPlainText(rawHtml, (ed ? ed.innerText : '') || (fallbackIn ? fallbackIn.value : '')).trim();
+            if (!plain) return showToast('Write a note before saving!', true);
+
+            const title = (titleIn && titleIn.value.trim()) || (plain.length > 48 ? plain.slice(0, 48) + '…' : plain);
+            const category = (catSel && catSel.value) || 'Lectures';
+            const noteObj = {
+                id: 'note_' + Date.now(),
+                subjectId: state.currentSubjectId,
+                title,
+                category,
+                tags: ['split-screen'],
+                color: 'violet',
+                pinned: false,
+                text: plain,
+                html: rawHtml || esc(plain).replace(/\n/g, '<br>'),
+                date: new Date().toLocaleDateString('en-GB') + ' • ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                updatedAt: Date.now()
+            };
+            state.notes.unshift(noteObj);
+            saveUnsavedDraftSnapshot(null);
+            saveData(); trackActivity(); updateSubjectStats(state.currentSubjectId);
+            if (ed) ed.innerHTML = '';
+            if (fallbackIn) fallbackIn.value = '';
+            if (titleIn) titleIn.value = '';
+            renderNotes();
+            showToast('Rich note saved to Smart Notes! 📝');
+        }
+
+        function applyLiveEditToNote(noteId, silent = false) {
+            const n = state.notes.find(x => x.id === noteId);
+            if (!n) return;
+            const ed = document.getElementById('noteRichEditor');
+            const titleIn = document.getElementById('noteTitleInput');
+            const catSel = document.getElementById('noteCategorySelect');
+            const tagsIn = document.getElementById('noteTagsInput');
+            const colorSel = document.getElementById('noteColorSelect');
+            if (!ed) return;
+
+            const cleanHtml = sanitizeRichHtml(ed.innerHTML);
+            const plain = htmlToStructuredPlainText(cleanHtml, ed.innerText || '').trim();
+            const explicitTitle = titleIn ? titleIn.value.trim() : '';
+            n.title = explicitTitle || (plain ? (plain.length > 48 ? plain.slice(0, 48) + '…' : plain) : n.title || 'Untitled Note');
+            n.category = (catSel && catSel.value) || n.category || 'General';
+            n.tags = parseTagsInput(tagsIn ? tagsIn.value : '');
+            n.color = (colorSel && colorSel.value) || n.color || 'violet';
+            n.pinned = !!editorNotePinned;
+            n.text = plain;
+            n.html = cleanHtml || esc(plain).replace(/\n/g, '<br>');
+            n.updatedAt = Date.now();
+
+            saveData();
+            renderNoteCategoryTabs();
+            renderNotesCardsOnly();
+            if (!silent) {
+                const statusEl = document.getElementById('noteDraftStatus');
+                if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-check mr-1 text-emerald-500"></i> Live changes saved automatically';
+            }
         }
 
         function addNote() {
-            const val = document.getElementById('noteInput').value.trim(); if(!val) return;
-            state.notes.unshift({ id: 'note_'+Date.now(), subjectId: state.currentSubjectId, text: val, date: new Date().toLocaleDateString('en-GB') });
-            saveData(); trackActivity(); renderNotes(); updateSubjectStats(state.currentSubjectId); document.getElementById('noteInput').value = '';
+            const ed = document.getElementById('noteRichEditor');
+            const fallbackIn = document.getElementById('noteInput');
+            const titleIn = document.getElementById('noteTitleInput');
+            const catSel = document.getElementById('noteCategorySelect');
+            const tagsIn = document.getElementById('noteTagsInput');
+            const colorSel = document.getElementById('noteColorSelect');
+
+            const cleanHtml = ed ? sanitizeRichHtml(ed.innerHTML) : '';
+            const plain = htmlToStructuredPlainText(cleanHtml, (ed ? ed.innerText : '') || (fallbackIn ? fallbackIn.value : '')).trim();
+            const explicitTitle = titleIn ? titleIn.value.trim() : '';
+
+            if (!plain && !explicitTitle) {
+                return showToast('Please enter a note title or body content!', true);
+            }
+
+            if (editingNoteId) {
+                applyLiveEditToNote(editingNoteId, false);
+                showToast('Note updated & saved! ✨');
+                resetNoteEditor();
+                return;
+            }
+
+            const title = explicitTitle || (plain.length > 48 ? plain.slice(0, 48) + '…' : plain);
+            const category = (catSel && catSel.value) || 'General';
+            const tags = parseTagsInput(tagsIn ? tagsIn.value : '');
+            const color = (colorSel && colorSel.value) || 'violet';
+
+            const newNote = {
+                id: 'note_' + Date.now(),
+                subjectId: state.currentSubjectId,
+                title,
+                category,
+                tags,
+                color,
+                pinned: !!editorNotePinned,
+                text: plain,
+                html: cleanHtml || esc(plain).replace(/\n/g, '<br>'),
+                date: new Date().toLocaleDateString('en-GB') + ' • ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                updatedAt: Date.now()
+            };
+
+            state.notes.unshift(newNote);
+            saveUnsavedDraftSnapshot(null);
+            saveData();
+            trackActivity();
+            resetNoteEditor();
+            renderNotes();
+            updateSubjectStats(state.currentSubjectId);
+            showToast('Smart Note saved! 📝');
         }
-        
-        const NOTE_STYLES = [
-            { card: 'bg-violet-50 border-violet-200 dark:bg-violet-500/10 dark:border-violet-400/20', meta: 'text-violet-600 dark:text-violet-300' },
-            { card: 'bg-cyan-50 border-cyan-200 dark:bg-cyan-500/10 dark:border-cyan-400/20', meta: 'text-cyan-600 dark:text-cyan-300' },
-            { card: 'bg-pink-50 border-pink-200 dark:bg-pink-500/10 dark:border-pink-400/20', meta: 'text-pink-600 dark:text-pink-300' },
-            { card: 'bg-amber-50 border-amber-200 dark:bg-amber-500/10 dark:border-amber-400/20', meta: 'text-amber-600 dark:text-amber-300' },
-            { card: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-400/20', meta: 'text-emerald-600 dark:text-emerald-300' }
-        ];
-        const noteStyle = id => { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return NOTE_STYLES[h % NOTE_STYLES.length]; };
+
+        function editSmartNote(noteId) {
+            const n = state.notes.find(x => x.id === noteId);
+            if (!n) return;
+            editingNoteId = n.id;
+            const ed = document.getElementById('noteRichEditor');
+            const titleIn = document.getElementById('noteTitleInput');
+            const catSel = document.getElementById('noteCategorySelect');
+            const tagsIn = document.getElementById('noteTagsInput');
+            const colorSel = document.getElementById('noteColorSelect');
+            const banner = document.getElementById('noteEditModeBanner');
+            const bannerLbl = document.getElementById('noteEditModeLabel');
+            const saveBtnTxt = document.getElementById('saveSmartNoteBtnText');
+
+            renderNoteCategoryTabs();
+            if (titleIn) titleIn.value = n.title || '';
+            if (catSel) catSel.value = n.category || 'General';
+            if (tagsIn) tagsIn.value = Array.isArray(n.tags) ? n.tags.join(', ') : '';
+            if (colorSel) colorSel.value = n.color || 'violet';
+            editorNotePinned = !!n.pinned;
+            const pinBtn = document.getElementById('notePinBtn');
+            if (pinBtn) {
+                pinBtn.className = editorNotePinned
+                    ? 'px-3 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm'
+                    : 'px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-amber-500 border border-gray-200 dark:border-gray-700 text-xs font-bold flex items-center gap-1.5 transition';
+            }
+
+            if (ed) {
+                ed.innerHTML = n.html ? sanitizeRichHtml(n.html) : esc(n.text || '').replace(/\n/g, '<br>');
+                ed.focus();
+            }
+            if (banner) banner.classList.remove('hidden');
+            if (bannerLbl) bannerLbl.textContent = `Editing "${n.title || 'Note'}" — changes auto-save in real time`;
+            if (saveBtnTxt) saveBtnTxt.textContent = 'Finish Editing';
+            renderNotesCardsOnly();
+        }
+
+        function resetNoteEditor() {
+            clearTimeout(liveNoteEditTimer);
+            editingNoteId = null;
+            editorNotePinned = false;
+            const ed = document.getElementById('noteRichEditor');
+            const fallbackIn = document.getElementById('noteInput');
+            const titleIn = document.getElementById('noteTitleInput');
+            const tagsIn = document.getElementById('noteTagsInput');
+            const banner = document.getElementById('noteEditModeBanner');
+            const saveBtnTxt = document.getElementById('saveSmartNoteBtnText');
+            const pinBtn = document.getElementById('notePinBtn');
+            const statusEl = document.getElementById('noteDraftStatus');
+            const wcEl = document.getElementById('noteWordCount');
+
+            if (ed) ed.innerHTML = '';
+            if (fallbackIn) fallbackIn.value = '';
+            if (titleIn) titleIn.value = '';
+            if (tagsIn) tagsIn.value = '';
+            if (banner) banner.classList.add('hidden');
+            if (saveBtnTxt) saveBtnTxt.textContent = 'Save Note';
+            if (pinBtn) pinBtn.className = 'px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-amber-500 border border-gray-200 dark:border-gray-700 text-xs font-bold flex items-center gap-1.5 transition';
+            if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i> Auto-Save Active';
+            if (wcEl) wcEl.textContent = '0 words • 0 chars';
+            saveUnsavedDraftSnapshot(null);
+            renderNotesCardsOnly();
+        }
+
+        function togglePinNote(e, noteId) {
+            if (e) e.stopPropagation();
+            const n = state.notes.find(x => x.id === noteId);
+            if (!n) return;
+            n.pinned = !n.pinned;
+            n.updatedAt = Date.now();
+            if (editingNoteId === noteId) {
+                editorNotePinned = n.pinned;
+            }
+            saveData();
+            renderNotes();
+            showToast(n.pinned ? 'Note pinned to top 📌' : 'Note unpinned');
+        }
+
+        function getFilteredSubjectNotes() {
+            const q = (document.getElementById('noteSearchInput')?.value || '').toLowerCase().trim();
+            return state.notes
+                .filter(n => n.subjectId === state.currentSubjectId)
+                .filter(n => activeNoteCategoryFilter === 'All' || (n.category || 'General') === activeNoteCategoryFilter)
+                .filter(n => {
+                    if (!q) return true;
+                    const hay = `${n.title || ''} ${n.text || ''} ${n.category || ''} ${(n.tags || []).join(' ')}`.toLowerCase();
+                    return hay.includes(q);
+                })
+                .sort((a, b) => {
+                    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+                    return 0;
+                });
+        }
+
+        function formatNotesArrayToTxt(notesArr, subjectName) {
+            const divider = '========================================================================';
+            const subDivider = '------------------------------------------------------------------------';
+            const lines = [
+                divider,
+                `STUDY HUB — SMART NOTES EXPORT`,
+                `Course / Subject : ${subjectName || 'Study Hub Workspace'}`,
+                `Exported At      : ${new Date().toISOString()}`,
+                `Total Notes      : ${notesArr.length}`,
+                divider,
+                ''
+            ];
+            notesArr.forEach((n, idx) => {
+                const title = (n.title || '').trim() || `Note #${idx + 1}`;
+                const cat = (n.category || '').trim() || 'General';
+                const tags = Array.isArray(n.tags) && n.tags.length ? n.tags.map(t => `#${t}`).join(' ') : 'None';
+                const body = htmlToStructuredPlainText(n.html || '', n.text || '');
+                lines.push(`[${idx + 1}] ${title}${n.pinned ? ' [PINNED]' : ''}`);
+                lines.push(`Category : ${cat} | Tags: ${tags} | Date: ${n.date || 'N/A'}`);
+                lines.push(subDivider);
+                lines.push(body || '(Empty note)');
+                lines.push('');
+                lines.push(divider);
+                lines.push('');
+            });
+            return lines.join('\r\n');
+        }
+
+        function triggerTxtFileDownload(content, filename) {
+            const blob = new Blob(['\uFEFF' + content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function getCurrentSubjectName() {
+            return state.subjects.find(s => s.id === state.currentSubjectId)?.name || 'Study_Hub';
+        }
+
+        function exportSingleNoteTxt(e, noteId) {
+            if (e) e.stopPropagation();
+            const n = state.notes.find(x => x.id === noteId);
+            if (!n) return;
+            const subName = getCurrentSubjectName();
+            const txt = formatNotesArrayToTxt([n], subName);
+            const safeTitle = (n.title || 'note').replace(/[^a-zA-Z0-9_\-\u0600-\u06FF]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 45) || 'note';
+            triggerTxtFileDownload(txt, `${safeTitle}.txt`);
+            showToast(`Exported "${n.title || 'Note'}" as .txt! 📄`);
+        }
+
+        function exportCurrentEditorNoteTxt() {
+            const ed = document.getElementById('noteRichEditor');
+            const titleIn = document.getElementById('noteTitleInput');
+            const catSel = document.getElementById('noteCategorySelect');
+            const tagsIn = document.getElementById('noteTagsInput');
+            const plain = ed ? htmlToStructuredPlainText(ed.innerHTML, ed.innerText || '').trim() : '';
+            const title = (titleIn && titleIn.value.trim()) || (plain ? plain.slice(0, 40) : '');
+            if (!plain && !title) return showToast('Write or open a note in the editor first to export!', true);
+            const tempNote = {
+                title: title || 'Draft Note',
+                category: (catSel && catSel.value) || 'General',
+                tags: parseTagsInput(tagsIn ? tagsIn.value : ''),
+                pinned: editorNotePinned,
+                html: ed ? ed.innerHTML : '',
+                text: plain,
+                date: new Date().toLocaleDateString('en-GB')
+            };
+            const subName = getCurrentSubjectName();
+            const txt = formatNotesArrayToTxt([tempNote], subName);
+            const safeTitle = (tempNote.title || 'note').replace(/[^a-zA-Z0-9_\-\u0600-\u06FF]+/g, '_').slice(0, 45) || 'note';
+            triggerTxtFileDownload(txt, `${safeTitle}.txt`);
+            showToast('Editor note exported to .txt! 📄');
+        }
+
+        function exportSplitNoteTxt() {
+            const ed = document.getElementById('splitNoteEditor');
+            const titleIn = document.getElementById('splitNoteTitleInput');
+            const catSel = document.getElementById('splitNoteCategorySelect');
+            const plain = ed ? htmlToStructuredPlainText(ed.innerHTML, ed.innerText || '').trim() : '';
+            if (!plain) return showToast('Write some notes in the split editor before exporting!', true);
+            const title = (titleIn && titleIn.value.trim()) || plain.slice(0, 40);
+            const subName = getCurrentSubjectName();
+            const txt = formatNotesArrayToTxt([{
+                title,
+                category: (catSel && catSel.value) || 'Lectures',
+                tags: ['split-screen'],
+                html: ed ? ed.innerHTML : '',
+                text: plain,
+                date: new Date().toLocaleDateString('en-GB')
+            }], subName);
+            const safeTitle = title.replace(/[^a-zA-Z0-9_\-\u0600-\u06FF]+/g, '_').slice(0, 45) || 'split_note';
+            triggerTxtFileDownload(txt, `${safeTitle}.txt`);
+            showToast('Split-screen note exported as .txt! 📄');
+        }
+
+        function exportFilteredNotesTxt() {
+            const filtered = getFilteredSubjectNotes();
+            if (!filtered.length) return showToast('No notes in the current filter view to export!', true);
+            const subName = getCurrentSubjectName();
+            const txt = formatNotesArrayToTxt(filtered, subName);
+            const safeSub = subName.replace(/[^a-zA-Z0-9_\-\u0600-\u06FF]+/g, '_').slice(0, 35) || 'Course';
+            const safeCat = activeNoteCategoryFilter.replace(/[^a-zA-Z0-9_\-]+/g, '_');
+            triggerTxtFileDownload(txt, `${safeSub}_${safeCat}_Notes.txt`);
+            showToast(`Exported ${filtered.length} note(s) to .txt! 📥`);
+        }
+
+        function exportAllSubjectNotesTxt() {
+            const allSubNotes = state.notes.filter(n => n.subjectId === state.currentSubjectId);
+            if (!allSubNotes.length) return showToast('No notes saved in this subject yet!', true);
+            const subName = getCurrentSubjectName();
+            const txt = formatNotesArrayToTxt(allSubNotes, subName);
+            const safeSub = subName.replace(/[^a-zA-Z0-9_\-\u0600-\u06FF]+/g, '_').slice(0, 40) || 'Course';
+            triggerTxtFileDownload(txt, `${safeSub}_All_Notes.txt`);
+            showToast(`Exported all ${allSubNotes.length} subject note(s) to .txt! 📦`);
+        }
+
         function renderNotes() {
-            document.getElementById('notesList').innerHTML = state.notes.filter(n=>n.subjectId===state.currentSubjectId).map(n => { const ns = noteStyle(n.id); return `
-                <!-- [INJECTED] Draggable Note -->
-                <div draggable="true" ondragstart="dragStart(event, 'note', '${n.id}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'note', '${n.id}')" class="${ns.card} p-5 rounded-2xl border relative group shadow-sm hover:shadow-md hover:-translate-y-0.5 transition animate-fade-in">
-                    <button onclick="deleteItem('notes','${n.id}')" class="absolute top-3 right-3 text-rose-500 opacity-0 group-hover:opacity-100 transition bg-white dark:bg-gray-800 w-8 h-8 rounded-lg shadow-sm flex items-center justify-center pointer-events-auto z-10"><i class="fa-solid fa-trash text-sm"></i></button>
-                    <p class="whitespace-pre-wrap text-sm font-semibold mb-4 leading-relaxed text-gray-800 dark:text-gray-200 pr-8 pointer-events-none">${esc(n.text)}</p>
-                    <div class="text-xs ${ns.meta} font-bold flex items-center gap-1 pointer-events-none"><i class="fa-regular fa-clock"></i> ${esc(n.date)}</div>
-                </div>`; }).join('');
+            normalizeState();
+            renderNoteCategoryTabs();
+            renderNotesCardsOnly();
+        }
+
+        function renderNotesCardsOnly() {
+            const listEl = document.getElementById('notesList');
+            if (!listEl) return;
+            const filtered = getFilteredSubjectNotes();
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<div class="col-span-full bg-white dark:bg-gray-800 rounded-3xl p-10 text-center border border-dashed border-gray-300 dark:border-gray-700 text-gray-400">
+                    <div class="w-14 h-14 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center mx-auto mb-3 text-2xl"><i class="fa-solid fa-feather-pointed"></i></div>
+                    <p class="font-bold text-gray-600 dark:text-gray-300">No notes match this view</p>
+                    <p class="text-xs mt-1">Use the Rich Text Editor above to write formatted notes, assign categories, or clear the search filter.</p>
+                </div>`;
+                return;
+            }
+            listEl.innerHTML = filtered.map(n => {
+                const ns = noteStyle(n);
+                const isBeingEdited = editingNoteId === n.id;
+                const tagsHtml = Array.isArray(n.tags) && n.tags.length
+                    ? `<div class="flex flex-wrap gap-1 mt-2.5">${n.tags.map(t => `<span class="px-2 py-0.5 rounded-md bg-white/70 dark:bg-gray-800/80 text-[10px] font-bold text-gray-600 dark:text-gray-300 border border-gray-200/60 dark:border-gray-700">#${esc(t)}</span>`).join('')}</div>`
+                    : '';
+                const bodyHtml = n.html ? sanitizeRichHtml(n.html) : esc(n.text || '').replace(/\n/g, '<br>');
+                return `
+                <div draggable="true" ondragstart="dragStart(event, 'note', '${n.id}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'note', '${n.id}')" onclick="editSmartNote('${n.id}')" class="${ns.card} p-5 rounded-2xl border relative group shadow-sm hover:shadow-md hover:-translate-y-0.5 transition animate-fade-in cursor-pointer flex flex-col justify-between ${isBeingEdited ? 'ring-2 ring-brand-500 shadow-lg' : ''}">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider ${ns.badge}">
+                                    <i class="fa-solid fa-folder-tree mr-1"></i>${esc(n.category || 'General')}
+                                </span>
+                                ${n.pinned ? `<span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-amber-500 text-white"><i class="fa-solid fa-thumbtack mr-1"></i>Pinned</span>` : ''}
+                                ${isBeingEdited ? `<span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-brand-600 text-white animate-pulse">Live Editing</span>` : ''}
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
+                                <button onclick="togglePinNote(event, '${n.id}')" title="${n.pinned ? 'Unpin Note' : 'Pin Note'}" class="w-7 h-7 rounded-lg bg-white/80 dark:bg-gray-800 hover:bg-amber-500 hover:text-white ${n.pinned ? 'text-amber-500' : 'text-gray-400'} shadow-xs flex items-center justify-center transition">
+                                    <i class="fa-solid fa-thumbtack text-xs"></i>
+                                </button>
+                                <button onclick="editSmartNote('${n.id}')" title="Edit in Rich Text Studio" class="w-7 h-7 rounded-lg bg-white/80 dark:bg-gray-800 hover:bg-brand-600 hover:text-white text-gray-600 dark:text-gray-300 shadow-xs flex items-center justify-center transition">
+                                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                </button>
+                                <button onclick="exportSingleNoteTxt(event, '${n.id}')" title="Export Note as .TXT" class="w-7 h-7 rounded-lg bg-white/80 dark:bg-gray-800 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 shadow-xs flex items-center justify-center transition">
+                                    <i class="fa-solid fa-file-arrow-down text-xs"></i>
+                                </button>
+                                <button onclick="deleteItem('notes','${n.id}')" title="Delete Note" class="w-7 h-7 rounded-lg bg-white/80 dark:bg-gray-800 hover:bg-rose-500 hover:text-white text-rose-500 shadow-xs flex items-center justify-center transition">
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <h4 class="font-extrabold text-base text-gray-900 dark:text-white mb-2 line-clamp-1">${esc(n.title || 'Untitled Note')}</h4>
+                        <div class="rich-note-body text-sm font-medium leading-relaxed text-gray-800 dark:text-gray-200 max-h-52 overflow-y-auto pr-1">${bodyHtml}</div>
+                        ${tagsHtml}
+                    </div>
+                    <div class="mt-4 pt-2.5 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[11px] ${ns.meta} font-bold">
+                        <span><i class="fa-regular fa-clock mr-1"></i>${esc(n.date)}</span>
+                        <span class="opacity-75 group-hover:opacity-100 transition"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Click to edit live</span>
+                    </div>
+                </div>`;
+            }).join('');
             document.querySelectorAll('[draggable]').forEach(el => el.addEventListener('dragend', () => el.style.opacity = '1'));
         }
 
@@ -3746,7 +4859,9 @@
 
         function deleteItem(type, id) {
             requestConfirm('Delete this item?', () => {
-                state[type] = state[type].filter(x => x.id !== id); saveData();
+                state[type] = state[type].filter(x => x.id !== id);
+                if(type === 'notes' && editingNoteId === id) resetNoteEditor();
+                saveData();
                 if(type==='notes') renderNotes(); if(type==='tasks') renderTasks(); if(type==='links') renderLinks();
                 if(type==='flashcards') renderFlashcards(); if(type==='deadlines') renderDeadlines(); if(type==='whiteboards') renderSavedWhiteboards();
                 updateSubjectStats(state.currentSubjectId); showToast('Item deleted');
@@ -8110,14 +9225,20 @@
             const q = document.getElementById('searchInput').value.toLowerCase().trim(), c = document.getElementById('searchResults');
             if(!q) { c.innerHTML = ''; return; }
             let r = [];
-            state.notes.filter(n=>n.text.toLowerCase().includes(q)).forEach(n=>r.push({icon:'fa-pen text-yellow-500', t:'Note', text:n.text.substring(0,50)+'...', sub:n.subjectId, tab:'notes'}));
-            (state.videos || []).filter(v=>v.title.toLowerCase().includes(q)).forEach(v=>r.push({icon:'fa-clapperboard text-cyan-500', t:'Video', text:v.title, sub:v.subjectId, tab:'videos', id:v.id}));
-            (state.recordings || []).filter(rec=>rec.title.toLowerCase().includes(q)).forEach(rec=>r.push({icon:'fa-microphone-lines text-rose-500', t:'Recording', text:rec.title, sub:rec.subjectId, tab:'recordings', id:rec.id}));
-            state.tasks.filter(t=>t.text.toLowerCase().includes(q)).forEach(t=>r.push({icon:'fa-check text-emerald-500', t:'Task', text:t.text, sub:t.subjectId, tab:'tasks'}));
-            (state.links || []).filter(l=>l.title.toLowerCase().includes(q)).forEach(l=>r.push({icon:'fa-link text-blue-500', t:'Link', text:l.title, sub:l.subjectId, tab:'links'}));
-            state.pdfs.filter(p=>p.original_name.toLowerCase().includes(q)).forEach(p=>r.push({icon:'fa-file text-blue-500', t:'File', text:p.original_name, sub:p.subjectId, tab:'pdfs'}));
-            state.flashcards.filter(f=>f.q.toLowerCase().includes(q) || f.a.toLowerCase().includes(q)).forEach(f=>r.push({icon:'fa-clone text-purple-500', t:'Flashcard', text:f.q, sub:f.subjectId, tab:'flashcards'}));
-            state.deadlines.filter(d=>d.title.toLowerCase().includes(q)).forEach(d=>r.push({icon:'fa-calendar text-brand-500', t:'Event', text:d.title, sub:d.subjectId, tab:'deadlines'}));
+            state.notes.filter(n => {
+                const hay = `${n.title || ''} ${n.text || ''} ${n.category || ''} ${(n.tags || []).join(' ')}`.toLowerCase();
+                return hay.includes(q);
+            }).forEach(n => {
+                const label = (n.title ? `${n.title} — ` : '') + (n.text || '').substring(0, 50);
+                r.push({icon:'fa-pen text-yellow-500', t:`Note (${n.category || 'General'})`, text:label, sub:n.subjectId, tab:'notes', id:n.id});
+            });
+            (state.videos || []).filter(v=>(v.title||'').toLowerCase().includes(q)).forEach(v=>r.push({icon:'fa-clapperboard text-cyan-500', t:'Video', text:v.title, sub:v.subjectId, tab:'videos', id:v.id}));
+            (state.recordings || []).filter(rec=>(rec.title||'').toLowerCase().includes(q)).forEach(rec=>r.push({icon:'fa-microphone-lines text-rose-500', t:'Recording', text:rec.title, sub:rec.subjectId, tab:'recordings', id:rec.id}));
+            state.tasks.filter(t=>(t.text||'').toLowerCase().includes(q)).forEach(t=>r.push({icon:'fa-check text-emerald-500', t:'Task', text:t.text, sub:t.subjectId, tab:'tasks'}));
+            (state.links || []).filter(l=>(l.title||'').toLowerCase().includes(q)).forEach(l=>r.push({icon:'fa-link text-blue-500', t:'Link', text:l.title, sub:l.subjectId, tab:'links'}));
+            state.pdfs.filter(p=>(p.original_name||'').toLowerCase().includes(q)).forEach(p=>r.push({icon:'fa-file text-blue-500', t:'File', text:p.original_name, sub:p.subjectId, tab:'pdfs'}));
+            state.flashcards.filter(f=>(f.q||'').toLowerCase().includes(q) || (f.a||'').toLowerCase().includes(q)).forEach(f=>r.push({icon:'fa-clone text-purple-500', t:'Flashcard', text:f.q, sub:f.subjectId, tab:'flashcards'}));
+            state.deadlines.filter(d=>(d.title||'').toLowerCase().includes(q)).forEach(d=>r.push({icon:'fa-calendar text-brand-500', t:'Event', text:d.title, sub:d.subjectId, tab:'deadlines'}));
             
             c.innerHTML = r.length ? r.map(x => {
                 const subName = state.subjects.find(s=>s.id === x.sub)?.name || 'Deleted Subject';
@@ -8127,7 +9248,7 @@
                         <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 shadow-inner"><i class="fa-solid ${x.icon} text-lg"></i></div>
                         <div>
                             <div class="text-sm font-bold text-gray-800 dark:text-gray-100">${esc(x.text)}</div>
-                            <div class="text-xs font-semibold text-gray-500 mt-1">${esc(subName)} • ${x.t}</div>
+                            <div class="text-xs font-semibold text-gray-500 mt-1">${esc(subName)} • ${esc(x.t)}</div>
                         </div>
                     </div>
                     <i class="fa-solid fa-arrow-right text-gray-300 opacity-0 group-hover:opacity-100 transition self-center"></i>

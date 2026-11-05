@@ -1,0 +1,275 @@
+{
+  "subjects": [
+    {
+      "id": "sub_cs401",
+      "name": "CS-401: Distributed Systems",
+      "icon": "fa-network-wired",
+      "color": "from-violet-600 via-purple-500 to-fuchsia-500",
+      "archived": false,
+      "folders": [
+        "Lectures",
+        "Tutorials",
+        "Assignments",
+        "Quizzes",
+        "Labs",
+        "References"
+      ]
+    },
+    {
+      "id": "sub_ai302",
+      "name": "AI-302: Neural Architectures",
+      "icon": "fa-brain",
+      "color": "from-fuchsia-600 via-pink-600 to-rose-500",
+      "archived": false,
+      "folders": [
+        "Lectures",
+        "Tutorials",
+        "Assignments",
+        "Quizzes",
+        "Labs",
+        "References"
+      ]
+    },
+    {
+      "id": "sub_sec210",
+      "name": "SEC-210: Applied Cryptography",
+      "icon": "fa-shield-halved",
+      "color": "from-emerald-500 via-teal-500 to-cyan-500",
+      "archived": false,
+      "folders": [
+        "Lectures",
+        "Tutorials",
+        "Assignments",
+        "Quizzes",
+        "Labs",
+        "References"
+      ]
+    }
+  ],
+  "pdfs": [
+    {
+      "id": "file_seed_1",
+      "subjectId": "sub_cs401",
+      "original_name": "CS401_Distributed_Systems_Architecture.pdf",
+      "filename": "CS401_Distributed_Systems_Architecture.pdf",
+      "folder": "Lectures"
+    }
+  ],
+  "videos": [
+    {
+      "id": "vid_seed_1",
+      "subjectId": "sub_cs401",
+      "title": "Lecture 01 — Raft Consensus & Atomic Storage Engine (16:9 HD)",
+      "filename": "CS401_Raft_Consensus_Lecture.mp4",
+      "date": "2026-11-05 • 09:00",
+      "duration": "00:12"
+    }
+  ],
+  "recordings": [],
+  "notes": [
+    {
+      "id": "note_1793892087767",
+      "subjectId": "sub_cs401",
+      "title": "Unsaved Crash Recovery Test Note",
+      "category": "General",
+      "tags": [],
+      "color": "violet",
+      "pinned": false,
+      "text": "This draft was typed right before a sudden reload!",
+      "html": "<p>This draft was typed right before a sudden reload!</p>",
+      "date": "05/11/2026 • 03:21 PM",
+      "updatedAt": 1793892087767
+    },
+    {
+      "id": "note_1793892069580",
+      "subjectId": "sub_cs401",
+      "title": "CAP Theorem & Consensus Proof",
+      "category": "Exam Prep",
+      "tags": [
+        "distributed",
+        "consensus",
+        "exam"
+      ],
+      "color": "violet",
+      "pinned": false,
+      "text": "## Linearizability vs Serializability\nTheorem: Under network partitions, choose between Consistency and Availability.\n\n  • Safety: Never return an uncommitted state\n  • Liveness: Every request eventually receives a response (Δt < ∞)",
+      "html": "<h2>Linearizability vs Serializability</h2><p><strong>Theorem:</strong> Under network partitions, choose between <em>Consistency</em> and <u>Availability</u>.</p><ul><li>Safety: Never return an uncommitted state</li><li>Liveness: Every request eventually receives a response (Δt &lt; ∞)</li></ul>",
+      "date": "05/11/2026 • 03:21 PM",
+      "updatedAt": 1793892069581
+    },
+    {
+      "id": "note_1793892055528",
+      "subjectId": "sub_cs401",
+      "title": "Lecture Notes: Lecture 01 — Raft Consensus & Atomic Storage Engine (16:9 HD)",
+      "category": "Lectures",
+      "tags": [
+        "video",
+        "Lecture 01 — Raft Consen"
+      ],
+      "color": "cyan",
+      "pinned": false,
+      "text": "[00:04] Raft Leader Election & Log Replication invariants",
+      "html": "<strong class=\"text-cyan-600 dark:text-cyan-400\">[00:04]</strong> Raft Leader Election &amp; Log Replication invariants",
+      "date": "05/11/2026 • 03:20 PM",
+      "updatedAt": 1793892055529
+    },
+    {
+      "id": "note_seed_1",
+      "subjectId": "sub_cs401",
+      "title": "Atomic File Operations & Crash Recovery Architecture",
+      "category": "Lectures",
+      "tags": [
+        "atomic-write",
+        "fsync",
+        "zero-data-loss"
+      ],
+      "pinned": true,
+      "color": "violet",
+      "date": "2026-11-05 • 09:30",
+      "updatedAt": "2026-11-05T15:20:05.267Z",
+      "text": "Atomic Persistence Protocol:\n1. Serialize state to a process-scoped .tmp file and validate JSON structure.\n2. Invoke fsync on the file descriptor before closing.\n3. Execute atomic rename over the primary state file and update the .sha256 integrity digest.\nKey Exam Takeaway: In-place file truncation is never crash-safe; atomic rename is indivisible at the filesystem inode level.",
+      "contentHTML": "<h2>Atomic Persistence Protocol</h2><p>To guarantee <b>Zero Data Loss</b> across unexpected crashes or power interruptions, the storage layer enforces a strict 3-step pipeline:</p><ul><li><b>Step 1 (Isolated Staging):</b> Serialize state to a process-scoped <code>.tmp</code> file and validate JSON structure.</li><li><b>Step 2 (Hardware Flush):</b> Invoke <code>fsync</code> on the file descriptor before closing.</li><li><b>Step 3 (Atomic Swap):</b> Execute atomic <code>rename</code> over the primary state file and update the <code>.sha256</code> integrity digest.</li></ul><blockquote>Key Exam Takeaway: In-place file truncation is never crash-safe; atomic rename is indivisible at the filesystem inode level.</blockquote>",
+      "html": "Atomic Persistence Protocol:<br>1. Serialize state to a process-scoped .tmp file and validate JSON structure.<br>2. Invoke fsync on the file descriptor before closing.<br>3. Execute atomic rename over the primary state file and update the .sha256 integrity digest.<br>Key Exam Takeaway: In-place file truncation is never crash-safe; atomic rename is indivisible at the filesystem inode level."
+    },
+    {
+      "id": "note_seed_2",
+      "subjectId": "sub_cs401",
+      "title": "Midterm Exam Formula & Theorem Checklist",
+      "category": "Exam Prep",
+      "tags": [
+        "cap-theorem",
+        "midterm",
+        "pacelc"
+      ],
+      "pinned": false,
+      "color": "amber",
+      "date": "2026-11-05 • 11:15",
+      "updatedAt": "2026-11-05T15:20:05.267Z",
+      "text": "CAP Theorem & PACELC:\nIn the presence of a network Partition (P), a distributed store must choose between Consistency (C) and Availability (A).\n- CP Systems: ZooKeeper, etcd, Spanner (strict linearizability)\n- AP Systems: Dynamo, Cassandra (eventual consistency with vector clocks)\nReview Raft log matching property before Friday seminar!",
+      "contentHTML": "<h2>CAP &amp; PACELC Theorem Summary</h2><p>In the presence of a network <b>Partition (P)</b>, a distributed store must choose between <u>Consistency (C)</u> and <u>Availability (A)</u>.</p><ul><li><b>CP Systems:</b> ZooKeeper, etcd, Spanner (strict linearizability)</li><li><b>AP Systems:</b> Dynamo, Cassandra (eventual consistency with vector clocks)</li></ul><p style=\"text-align: center;\"><i>Review Raft log matching property before Friday&#39;s seminar!</i></p>",
+      "html": "CAP Theorem &amp; PACELC:<br>In the presence of a network Partition (P), a distributed store must choose between Consistency (C) and Availability (A).<br>- CP Systems: ZooKeeper, etcd, Spanner (strict linearizability)<br>- AP Systems: Dynamo, Cassandra (eventual consistency with vector clocks)<br>Review Raft log matching property before Friday seminar!"
+    },
+    {
+      "id": "note_seed_3",
+      "subjectId": "sub_ai302",
+      "title": "Transformer Scaled Dot-Product Attention",
+      "category": "Summaries",
+      "tags": [
+        "transformers",
+        "attention",
+        "deep-learning"
+      ],
+      "pinned": true,
+      "color": "cyan",
+      "date": "2026-11-05 • 13:00",
+      "updatedAt": "2026-11-05T15:20:05.267Z",
+      "text": "Scaled Dot-Product Attention:\nAttention(Q, K, V) = softmax((Q * K^T) / sqrt(d_k)) * V\n- Scaling by 1 / sqrt(d_k) prevents dot products from saturating the softmax function.\n- Multi-Head Attention allows attending to information from different representation subspaces simultaneously.",
+      "contentHTML": "<h2>Scaled Dot-Product Attention</h2><p>The core self-attention equation projects queries <b>Q</b>, keys <b>K</b>, and values <b>V</b>:</p><blockquote>Attention(Q, K, V) = softmax((Q &middot; K<sup>T</sup>) / &radic;d<sub>k</sub>) &middot; V</blockquote><ul><li>Scaling by <code>1 / &radic;d_k</code> prevents dot products from saturating the softmax function.</li><li>Multi-Head Attention allows attending to information from different representation subspaces simultaneously.</li></ul>",
+      "html": "Scaled Dot-Product Attention:<br>Attention(Q, K, V) = softmax((Q * K^T) / sqrt(d_k)) * V<br>- Scaling by 1 / sqrt(d_k) prevents dot products from saturating the softmax function.<br>- Multi-Head Attention allows attending to information from different representation subspaces simultaneously."
+    }
+  ],
+  "noteCategories": [
+    "Lectures",
+    "Exam Prep",
+    "Summaries",
+    "Projects",
+    "Research",
+    "Important",
+    "General"
+  ],
+  "tasks": [
+    {
+      "id": "task_seed_1",
+      "subjectId": "sub_cs401",
+      "text": "Implement Raft Leader Election & Heartbeat RPC handler",
+      "completed": false
+    },
+    {
+      "id": "task_seed_2",
+      "subjectId": "sub_cs401",
+      "text": "Export Lecture 01 & Midterm Smart Notes to .txt for offline review",
+      "completed": false
+    }
+  ],
+  "flashcards": [
+    {
+      "id": "fc_seed_1",
+      "subjectId": "sub_cs401",
+      "type": "Definition",
+      "q": "Why must an atomic file save call fsync() before rename()?",
+      "a": "Without fsync(), the OS page cache may reorder the directory entry rename before the file data blocks are committed to non-volatile storage, leaving a 0-byte file after power loss."
+    },
+    {
+      "id": "fc_seed_2",
+      "subjectId": "sub_cs401",
+      "type": "Formula",
+      "q": "What are the 3 server states in the Raft consensus algorithm?",
+      "a": "Leader, Follower, and Candidate."
+    }
+  ],
+  "whiteboards": [],
+  "deadlines": [
+    {
+      "id": "dl_seed_1",
+      "subjectId": "sub_cs401",
+      "title": "Distributed KV Store Lab Submission",
+      "type": "Project",
+      "date": "2026-11-12"
+    }
+  ],
+  "links": [
+    {
+      "id": "link_seed_1",
+      "subjectId": "sub_cs401",
+      "title": "In Search of an Understandable Consensus Algorithm (Raft Paper)",
+      "url": "https://raft.github.io/raft.pdf"
+    }
+  ],
+  "activity": {
+    "2026-11-05": 78
+  },
+  "subjectTimes": {
+    "sub_cs401": 2700.351083333333,
+    "sub_ai302": 1800
+  },
+  "pomodorosCompleted": 4,
+  "currentSubjectId": null,
+  "_lastSavedAt": 1793892207539,
+  "theme": "light",
+  "customSounds": [],
+  "pomodoroDays": {
+    "2026-11-05": 4
+  },
+  "settings": {
+    "defaultSaveLocation": "",
+    "zenVideoFolder": "",
+    "zenScene": "north_pole",
+    "bgTheme": "aurora",
+    "particleEffect": "network",
+    "clockStyle": "digital",
+    "timeFormat": "12h",
+    "launchWindowMode": "windowed",
+    "fontScale": "medium",
+    "notifications": true,
+    "startup": false,
+    "perfThrottle": false,
+    "pomoWork": 25,
+    "pomoBreak": 5,
+    "mixerMaster": 80,
+    "mixerMuted": false,
+    "mixerLevels": {},
+    "theme": "dark",
+    "accent": "violet",
+    "autoNextPomo": false,
+    "zenModeStyle": "sanctuary",
+    "zenDynamic": true,
+    "zenShowGreeting": true,
+    "zenShowClock": true,
+    "zenShowQuote": true,
+    "zenShowPomodoro": true,
+    "zenShowMixer": true,
+    "zenShowControls": true,
+    "zenSceneIndex": 0,
+    "pdfExportDir": ""
+  }
+}

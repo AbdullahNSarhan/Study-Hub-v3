@@ -230,16 +230,29 @@ def build_state_from_legacy():
     return state
 
 
+def atomic_write_text(target_path, text_content):
+    """Write text to a temporary file, flush to disk with os.fsync, and atomically replace target_path."""
+    folder = os.path.dirname(os.path.abspath(target_path))
+    os.makedirs(folder, exist_ok=True)
+    tmp_path = f"{target_path}.{os.getpid()}.{int(datetime.now().timestamp() * 1000)}.tmp"
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        f.write(text_content)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, target_path)
+
+
 def snapshot_before_overwrite(old_json):
-    """Keep one snapshot per day (the state at the start of that day) + prune old ones."""
+    """Keep one snapshot per day (written atomically) + prune old ones."""
     try:
         path = os.path.join(BACKUP_DIR, f"state_{datetime.now():%Y-%m-%d}.json")
-        if not os.path.exists(path):
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(old_json)
+        atomic_write_text(path, old_json)
         backups = sorted(glob.glob(os.path.join(BACKUP_DIR, 'state_*.json')))
         for old in backups[:-KEEP_BACKUPS]:
-            os.remove(old)
+            try:
+                os.remove(old)
+            except OSError:
+                pass
     except Exception as e:
         print(f"Backup warning: {e}")
 
@@ -301,8 +314,6 @@ def check_origin():
 # --- API Endpoints ---
 @app.route('/')
 def index():
-    # Prefer live disk HTML when running inside the project folder so UI updates take effect immediately,
-    # otherwise serve the bundled HTML from RESOURCE_DIR (_MEIPASS) for standalone distribution.
     candidates = [
         BASE_DIR,
         os.path.dirname(BASE_DIR),
@@ -331,30 +342,85 @@ def serve_vendor(filename):
 
 @app.route('/api/data', methods=['GET', 'POST'])
 def manage_data():
-    row = db.session.get(AppState, 1)
-
-    if request.method == 'POST':
-        data = request.get_json(silent=True)
-        if not isinstance(data, dict) or not isinstance(data.get('subjects'), list):
-            return jsonify({"error": "Invalid data"}), 400
-
-        if row is None:
-            row = AppState(id=1, data='{}', updated_at='')
-            db.session.add(row)
-        elif row.data and row.data != '{}':
-            snapshot_before_overwrite(row.data)
-
-        row.data = json.dumps(data, ensure_ascii=False)
-        row.updated_at = datetime.now().isoformat()
-        db.session.commit()
-        return jsonify({"status": "success"})
-
-    if row is None:
-        return jsonify({})
     try:
-        return jsonify(json.loads(row.data))
-    except (ValueError, TypeError):
-        return jsonify({"error": "Stored data is damaged. Restore from StudyHub_Backups."}), 500
+        row = db.session.get(AppState, 1)
+        primary_mirror = os.path.join(BACKUP_DIR, 'latest_atomic_state.json')
+
+        if request.method == 'POST':
+            data = request.get_json(silent=True)
+            if data is None and request.data:
+                try:
+                    data = json.loads(request.data.decode('utf-8'))
+                except Exception:
+                    data = None
+            if not isinstance(data, dict) or not isinstance(data.get('subjects'), list):
+                return jsonify({"error": "Invalid data"}), 400
+
+            data.pop('_meta', None)
+            serialized = json.dumps(data, ensure_ascii=False)
+
+            if row is None:
+                row = AppState(id=1, data='{}', updated_at='')
+                db.session.add(row)
+            elif row.data and row.data != '{}':
+                snapshot_before_overwrite(row.data)
+
+            # 1) Atomic file mirror write first (temp -> fsync -> os.replace)
+            atomic_write_text(primary_mirror, serialized)
+            snapshot_before_overwrite(serialized)
+
+            # 2) Transactional database commit
+            row.data = serialized
+            row.updated_at = datetime.now().isoformat()
+            db.session.commit()
+            return jsonify({"status": "success", "savedAt": row.updated_at})
+
+        if row is not None and row.data:
+            try:
+                return jsonify(json.loads(row.data))
+            except (ValueError, TypeError):
+                pass
+
+        # Automatic state recovery from atomic mirror or latest daily backup
+        candidates = [primary_mirror] + sorted(glob.glob(os.path.join(BACKUP_DIR, 'state_*.json')), reverse=True)
+        for cand in candidates:
+            if os.path.isfile(cand):
+                try:
+                    with open(cand, 'r', encoding='utf-8') as f:
+                        recovered = json.loads(f.read())
+                    if isinstance(recovered, dict):
+                        return jsonify(recovered)
+                except Exception:
+                    continue
+        return jsonify({})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Database operation failed safely: {e}"}), 500
+
+
+@app.route('/api/autosave_draft', methods=['GET', 'POST'])
+def autosave_draft():
+    draft_path = os.path.join(BACKUP_DIR, 'unsaved_draft_journal.json')
+    try:
+        if request.method == 'POST':
+            payload = request.get_json(silent=True)
+            if payload is None and request.data:
+                payload = json.loads(request.data.decode('utf-8'))
+            if not payload or payload.get('clear') is True:
+                if os.path.isfile(draft_path):
+                    os.remove(draft_path)
+                return jsonify({"status": "cleared"})
+            payload['updatedAt'] = datetime.now().isoformat()
+            atomic_write_text(draft_path, json.dumps(payload, ensure_ascii=False))
+            return jsonify({"status": "success"})
+        else:
+            if os.path.isfile(draft_path):
+                with open(draft_path, 'r', encoding='utf-8') as f:
+                    return jsonify({"status": "success", "draft": json.loads(f.read())})
+            return jsonify({"status": "empty", "draft": None})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
 
 
 @app.route('/api/upload_file', methods=['POST'])

@@ -1,0 +1,7 @@
+{
+  "name": "Study Hub",
+  "description": "Comprehensive academic and personal study management workspace featuring atomic zero-data-loss persistence, a rich-text Smart Notes studio with categorization and .txt export, a responsive 16:9 Video Studio with WaveSurfer audio visualization, split-screen PDF reader, interactive whiteboard, flashcards, Pomodoro focus timer, and 17-scene Zen Sanctuary.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
